@@ -1,0 +1,45 @@
+# ---------- 运行期数据 ----------
+# 默认数据根目录：<程序目录>/data（可用环境变量 TOTP_DATA_FILE 重定向）
+data/
+
+# 下列规则用于兜底：当 TOTP_DATA_FILE 把数据目录指向仓库内部时仍能命中
+# 连接配置，含 remoteToken / accessToken 明文令牌
+server.json
+# 用户表
+users.json
+# 各用户保险库 <vaultId>.json
+vaults/
+# 早期单用户遗留库
+vault.json
+# pywebview 本地存储（主题等界面偏好）
+webview/
+
+# ---------- 状态与临时文件 ----------
+# 程序根目录下的状态记录（不在 data/ 内，必须单独忽略）
+.2fa-state.json
+# 重置标记（无扩展名）
+.reset-pending
+# 原子写的中间态（os.replace 之前的 .tmp）
+*.tmp
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---------- 打包产物（.bat / .sh → dist/2FA-Tool） ----------
+build/
+dist/
+*.spec
+*.manifest
+
+# ---------- 编辑器 / 系统 ----------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
