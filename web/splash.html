@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>正在启动 · 156-2FA</title>
+    <style>
+        :root {
+            --primary: #1A73E8;
+            --primary-soft: #63A4FF;
+            --bg: #F4F7FB;
+            --track: #E3E9F2;
+            --text: #1E293B;
+            --dim: #64748B;
+        }
+        body.dark {
+            --primary: #6EA8FF;
+            --primary-soft: #3B7DDD;
+            --bg: #1A1D21;
+            --track: #33383F;
+            --text: #E8EAED;
+            --dim: #9AA4B2;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; user-select: none; cursor: default;
+        }
+        .panel { width: 100%; padding: 8px 32px; text-align: center; }
+        .logo {
+            width: 58px; height: 58px; border-radius: 18px;
+            margin: 0 auto 15px;
+            background: var(--primary); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 20px rgba(26, 115, 232, .28);
+        }
+        .logo svg { width: 32px; height: 32px; }
+        .logo.spin { animation: pop .5s cubic-bezier(.34, 1.56, .64, 1); }
+        @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        h1 { font-size: 19px; font-weight: 700; letter-spacing: .4px; }
+        .sub { margin-top: 6px; font-size: 12.5px; color: var(--dim); }
+        .bar {
+            margin: 26px 0 9px;
+            height: 8px; border-radius: 99px;
+            background: var(--track);
+            overflow: hidden;
+        }
+        .fill {
+            height: 100%; width: 0%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-soft), var(--primary));
+            background-size: 200% 100%;
+            transition: width .45s cubic-bezier(.4, 0, .2, 1);
+            animation: flow 1.8s linear infinite;
+        }
+        @keyframes flow { from { background-position: 0 0; } to { background-position: -200% 0; } }
+        .status {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 12px; color: var(--dim);
+            min-height: 16px;
+        }
+        .foot {
+            margin-top: 16px; font-size: 11px; color: var(--dim);
+            opacity: .7; letter-spacing: .2px;
+        }
+        .error { color: #D32F2F; }
+        body.dark .error { color: #EF5350; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <div class="logo spin" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5 4.5 5.6v5.2c0 4.6 3.1 8.7 7.5 10.7 4.4-2 7.5-6.1 7.5-10.7V5.6L12 2.5Z" />
+                <path d="M9.2 12.2l2 2 3.6-3.9" />
+            </svg>
+        </div>
+        <h1>156-2FA</h1>
+        <div class="sub">动态验证码 · 本地加密保险库</div>
+
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
+            <div class="fill" id="fill"></div>
+        </div>
+        <div class="status">
+            <span id="text">正在启动…</span>
+            <span id="pct">0%</span>
+        </div>
+
+        <div class="foot">口令与密钥仅保存在本机，不会上传到任何服务器</div>
+    </div>
+
+    <script>
+        var fill = document.getElementById('fill');
+        var bar = document.getElementById('bar');
+        var textEl = document.getElementById('text');
+        var pctEl = document.getElementById('pct');
+
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.body.classList.add('dark');
+        }
+
+        /**
+         * 由 Python 调用：更新启动进度
+         * @param {number} percent 0~100
+         * @param {string} message 当前步骤说明
+         */
+        window.setProgress = function (percent, message) {
+            var value = Math.max(0, Math.min(100, Number(percent) || 0));
+            fill.style.width = value + '%';
+            bar.setAttribute('aria-valuenow', String(Math.round(value)));
+            pctEl.textContent = Math.round(value) + '%';
+            if (message) textEl.textContent = message;
+        };
+
+        /** 由 Python 调用：启动失败时给出提示 */
+        window.setError = function (message) {
+            textEl.textContent = message || '启动失败';
+            textEl.classList.add('error');
+        };
+    </script>
+</body>
+</html>

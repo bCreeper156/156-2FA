@@ -522,6 +522,12 @@ code { padding:2px 6px; border-radius:6px; background:rgba(127,127,127,.16); fon
                 ctype = "application/javascript; charset=utf-8"
             elif target.endswith(".css"):
                 ctype = "text/css; charset=utf-8"
+            elif target.endswith(".woff2"):
+                ctype = "font/woff2"
+            elif target.endswith(".woff"):
+                ctype = "font/woff"
+            elif target.endswith(".ttf"):
+                ctype = "font/ttf"
             with open(target, "rb") as fh:
                 data = fh.read()
             extra_headers = {}

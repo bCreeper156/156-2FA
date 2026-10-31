@@ -2,7 +2,8 @@
 """
 156-2FA 主程序（前端已与后端分离）
 - 多用户：本地用户表 data/users.json，口令仅以 Argon2id 哈希保存
-- gui（默认）：启动即弹出登录/注册窗口，校验通过后解密该用户自己的加密 JSON 保险库，
+- gui（默认）：先显示带进度条的启动窗口，初始化完成并关闭后再弹出登录/注册窗口（所有窗口默认居中），
+  校验通过后解密该用户自己的加密 JSON 保险库，
   再启动本地 HTTP 服务（默认 127.0.0.1 + 随机端口，可在设置页自定义），
   并在同一个 pywebview 窗口进程中打开验证码主界面（不使用外部浏览器）
 - serve：无界面服务端，解锁保险库后常驻对外提供 REST API，供本机或远程客户端连接
@@ -581,7 +582,58 @@ def adopt_legacy_vault(vault_path: str, password: str) -> bool:
 
 
 # ------------------------------------------------------------------
-# 图形模式：登录窗口 -> 主窗口（同一个 pywebview 生命周期）
+# 窗口居中：所有窗口默认落在主屏幕正中
+# ------------------------------------------------------------------
+# 启动窗口尺寸（宽、高）
+SPLASH_SIZE = (460, 300)
+# 登录窗口 / 主窗口尺寸
+LOGIN_SIZE = (440, 640)
+MAIN_SIZE = (980, 800)
+
+_screen_cache = {"ready": False, "screen": None}
+
+
+def primary_screen():
+    """主屏幕信息（只查询一次；取不到时返回 None，交由系统自行摆放）"""
+    if not _screen_cache["ready"]:
+        _screen_cache["ready"] = True
+        try:
+            import webview
+
+            screens = webview.screens
+            _screen_cache["screen"] = screens[0] if screens else None
+        except Exception:
+            _screen_cache["screen"] = None
+    return _screen_cache["screen"]
+
+
+def center_position(width: int, height: int) -> tuple:
+    """按主屏幕尺寸算出居中坐标，用于把窗口默认放在屏幕中间"""
+    screen = primary_screen()
+    if screen is None:
+        return None, None
+    return (int(screen.x + max(0, screen.width - width) / 2),
+            int(screen.y + max(0, screen.height - height) / 2))
+
+
+def prefers_dark() -> bool:
+    """尽力判断系统是否为深色主题（决定启动窗口底色，判断不了就按浅色处理）"""
+    if os.name != "nt":
+        return False
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+        ) as key:
+            return not winreg.QueryValueEx(key, "AppsUseLightTheme")[0]
+    except Exception:
+        return False
+
+
+# ------------------------------------------------------------------
+# 图形模式：启动窗口 -> 登录窗口 -> 主窗口（同一个 pywebview 生命周期）
 # ------------------------------------------------------------------
 def run_gui() -> int:
     """在 pywebview 中完成登录/注册与主界面展示，不使用外部浏览器"""
@@ -591,18 +643,20 @@ def run_gui() -> int:
         "store": None,
         "vault": None,
         "server": None,
+        "splash_window": None,
         "login_window": None,
         "main_window": None,
         "username": None,
         "unlocked": False,
         "reset": False,
+        "boot_error": None,
     }
 
     def handle_reset():
         """重置程序：标记待清理数据，并销毁所有窗口退出进程"""
         ctx["reset"] = True
         mark_pending_reset()
-        for key in ("main_window", "login_window"):
+        for key in ("main_window", "login_window", "splash_window"):
             window = ctx.get(key)
             if window is not None:
                 try:
@@ -873,11 +927,15 @@ def run_gui() -> int:
 
             # 先创建主窗口，再关闭登录窗口，避免 GUI 循环提前退出
             try:
+                width, height = MAIN_SIZE
+                x, y = center_position(width, height)
                 ctx["main_window"] = webview.create_window(
                     title=f"2FA 动态验证码 · {username}",
                     url=url,
-                    width=980,
-                    height=800,
+                    width=width,
+                    height=height,
+                    x=x,
+                    y=y,
                     min_size=(460, 560),
                     js_api=MainApi(),
                 )
@@ -900,30 +958,158 @@ def run_gui() -> int:
 
             return {"ok": True, "url": url}
 
-    def open_login_window():
+    def open_login_window(hidden: bool = False):
+        """创建登录窗口；hidden=True 时先建好但不显示，便于等启动窗口关闭后再露面"""
+        width, height = LOGIN_SIZE
+        x, y = center_position(width, height)
         ctx["login_window"] = webview.create_window(
             title="2FA 工具 · 用户登录",
             url=resource_path("web/login.html"),
-            width=440,
-            height=640,
+            width=width,
+            height=height,
+            x=x,
+            y=y,
             resizable=False,
+            hidden=hidden,
             js_api=AuthApi(),
         )
         return ctx["login_window"]
 
-    ctx["store"] = users_store()
+    def create_splash_window():
+        """启动窗口：无边框小窗，带加载进度条"""
+        width, height = SPLASH_SIZE
+        x, y = center_position(width, height)
+        ctx["splash_window"] = webview.create_window(
+            title="156-2FA 正在启动",
+            url=resource_path("web/splash.html"),
+            width=width,
+            height=height,
+            x=x,
+            y=y,
+            resizable=False,
+            frameless=True,
+            background_color="#1A1D21" if prefers_dark() else "#F4F7FB",
+        )
+        return ctx["splash_window"]
+
+    def boot():
+        """启动流程：按步骤初始化并把进度回报给启动窗口
+
+        每一步都有最短展示时间，避免初始化太快导致进度条一闪而过。
+        登录窗口先以隐藏方式建好（保证窗口数不为零，否则 GUI 循环会退出），
+        等启动窗口真正关闭后再显示，做到「启动窗口关闭 → 主界面出现」的顺序。
+        """
+        splash = ctx.get("splash_window")
+
+        def splash_alive():
+            return splash is not None and not splash.events.closed.is_set()
+
+        if splash is not None:
+            # 等页面就绪（最多 10 秒）后再推进度；用户提前关闭启动窗口则不再继续
+            deadline = time.time() + 10
+            while splash_alive() and not splash.events.loaded.is_set():
+                if time.time() > deadline:
+                    break
+                time.sleep(0.05)
+
+        def report(percent, message):
+            """推进度给启动页；页面不可用时忽略，不阻断启动"""
+            if splash is None:
+                return
+            try:
+                splash.evaluate_js("window.setProgress(%d, %s)"
+                                   % (max(0, min(100, int(percent))), json.dumps(message)))
+            except Exception:
+                pass
+
+        def step(percent, message, worker=None, seconds=0.24):
+            """执行一步初始化，返回是否仍可继续"""
+            started = time.time()
+            report(percent, message)
+            try:
+                if worker is not None:
+                    worker()
+            except Exception as exc:
+                ctx["boot_error"] = f"{message.rstrip('…')}失败：{exc}"
+            remaining = seconds - (time.time() - started)
+            if remaining > 0:
+                time.sleep(remaining)
+            return ctx["boot_error"] is None
+
+        def ensure_data_dir():
+            os.makedirs(data_root(), exist_ok=True)
+
+        def load_users():
+            ctx["store"] = users_store()
+
+        def check_frontend():
+            index = resource_path("web/index.html")
+            if not os.path.isfile(index):
+                raise FileNotFoundError(f"缺少前端文件 {index}")
+
+        for percent, message, worker in (
+            (12, "正在初始化运行环境…", ensure_data_dir),
+            (34, "正在加载用户数据…", load_users),
+            (56, "正在读取连接配置…", apiconfig.load_connection_config),
+            (74, "正在校验界面资源…", check_frontend),
+            (92, "正在打开登录窗口…", lambda: open_login_window(hidden=True)),
+        ):
+            if splash is not None and not splash_alive():
+                ctx["boot_error"] = ctx["boot_error"] or "启动窗口已被关闭"
+                break
+            if not step(percent, message, worker):
+                break
+
+        if ctx["boot_error"] is None:
+            report(100, "准备就绪")
+            time.sleep(0.28)
+        elif splash is not None:
+            try:
+                splash.evaluate_js("window.setError(%s)" % json.dumps(ctx["boot_error"]))
+            except Exception:
+                pass
+            time.sleep(1.2)
+
+        if splash is not None:
+            try:
+                splash.destroy()
+            except Exception:
+                pass
+            # 等启动窗口真正关闭（事件回执）后再显示登录窗口，避免两个窗口同时出现
+            deadline = time.time() + 5
+            while not splash.events.closed.is_set() and time.time() < deadline:
+                time.sleep(0.03)
+            ctx["splash_window"] = None
+
+        login = ctx.get("login_window")
+        if login is not None and ctx["boot_error"] is None:
+            # 启动窗口已关闭，此时才让登录窗口露面（失败重试一次，避免窗口存在却不可见）
+            for attempt in (0, 1):
+                try:
+                    login.show()
+                    break
+                except Exception:
+                    if attempt == 0:
+                        time.sleep(0.2)
 
     try:
-        open_login_window()
+        create_splash_window()
     except Exception as exc:
-        print(f"[错误] 无法创建登录窗口：{exc}")
+        print(f"[错误] 无法创建启动窗口：{exc}")
         return 1
 
     try:
-        webview.start(private_mode=False, storage_path=web_storage_path())
+        webview.start(boot, private_mode=False, storage_path=web_storage_path())
     except KeyboardInterrupt:
         print("\n[退出] 收到中断信号。")
     finally:
+        splash = ctx.get("splash_window")
+        if splash is not None:
+            try:
+                splash.destroy()
+            except Exception:
+                pass
+            ctx["splash_window"] = None
         if ctx["server"] is not None:
             ctx["server"].stop()
         if ctx["vault"] is not None:
@@ -936,6 +1122,10 @@ def run_gui() -> int:
     if ctx["reset"]:
         print("[退出] 程序已重置，所有用户数据已删除。")
         return 0
+
+    if ctx["boot_error"]:
+        print(f"[错误] {ctx['boot_error']}")
+        return 1
 
     if not ctx["unlocked"]:
         print("[退出] 未通过登录验证。")

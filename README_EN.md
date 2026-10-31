@@ -249,10 +249,12 @@ http://frontend-host/index.html?api=http://192.168.1.9:8765&apiToken=<token>
 ├── web/                 # Frontend (static, hostable standalone)
 │   ├── index.html       # Main page for displaying verification codes
 │   ├── login.html       # User login / registration window
+│   ├── splash.html      # Splash window (loading progress bar)
 │   ├── settings.html    # Theme, connection & API, user switching, program reset
 │   ├── apidocs.html     # API documentation page (served at /api/docs)
 │   ├── api.js           # Unified API client (local / remote data source)
-│   └── toast.js         # Site-wide toast notification component
+│   ├── toast.js         # Site-wide toast notification component
+│   └── fonts/           # Self-hosted Material Symbols icon font (works offline)
 └── data/                # User table, per-user vaults and server.json (generated at runtime)
 ```
 

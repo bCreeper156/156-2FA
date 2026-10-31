@@ -284,10 +284,12 @@ http://前端地址/index.html?api=http://192.168.1.9:8765&apiToken=<令牌>
 ├── web/                 # 前端（纯静态，可独立部署）
 │   ├── index.html       # 验证码展示主页
 │   ├── login.html       # 用户登录 / 注册窗口
+│   ├── splash.html      # 启动窗口（加载进度条）
 │   ├── settings.html    # 主题、连接与 API、切换用户、重置程序
 │   ├── apidocs.html     # 接口文档页（服务端 /api/docs 提供）
 │   ├── api.js           # 前端统一 API 客户端（本地 / 远程数据源）
-│   └── toast.js         # 全站统一的 Toast 提示组件
+│   ├── toast.js         # 全站统一的 Toast 提示组件
+│   └── fonts/           # 本地自托管的 Material Symbols 图标字体（离线可用）
 └── data/                # 用户表、各用户保险库与 server.json（运行时生成）
 ```
 
