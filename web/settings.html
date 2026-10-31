@@ -165,6 +165,20 @@
         .network-status { margin-top:10px; font-size:12.5px; line-height:1.6; font-weight:600; color:var(--md-primary); }
         .network-status.error { color:#D32F2F; }
 
+        /* ===== 白名单 ===== */
+        .whitelist-row { display:grid; grid-template-columns:1.6fr auto; gap:10px; align-items:center; }
+        .whitelist-row input { width:100%; border:1.5px solid var(--md-outline); border-radius:12px;
+            background:var(--md-surface-variant); color:var(--md-on-surface); padding:11px 12px; font:inherit; outline:none; }
+        .whitelist-row input:focus { border-color:var(--md-primary); }
+        .whitelist-row input:disabled, .btn-secondary:disabled { opacity:.55; cursor:not-allowed; }
+        .whitelist-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .whitelist-list:empty { display:none; }
+        .whitelist-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 11px;
+            border-radius:40px; border:1px solid var(--md-outline); background:var(--md-surface-variant);
+            color:var(--md-on-surface); font-size:12.5px; }
+        .whitelist-chip button { border:none; background:transparent; color:var(--md-on-surface-variant);
+            cursor:pointer; font:inherit; line-height:1; padding:0 4px; }
+
         /* ===== 次级按钮（测试连接 / 接口文档） ===== */
         .btn-secondary {
             background: var(--md-surface-variant);
@@ -293,6 +307,10 @@
         <symbol id="i-check" viewBox="0 0 24 24">
             <polyline points="20 6 9 17 4 12" />
         </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+        </symbol>
         <symbol id="i-check-circle" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" />
             <polyline points="8.5 12 11 14.5 15.5 9.5" />
@@ -413,6 +431,18 @@
                 </div>
                 <p class="network-note">留空表示使用 127.0.0.1 与随机端口。保存时会先校验「地址属于本机 + 端口未被占用」，通过后才重启服务并写入配置，失败则原样回滚。填 0.0.0.0 可让本机全部地址都可访问。</p>
                 <p class="network-note" id="localAddresses"></p>
+
+                <div class="network-field" style="margin-top:16px">
+                    <label for="whitelistInput">Host / Origin 白名单</label>
+                    <div class="whitelist-row">
+                        <input id="whitelistInput" type="text" placeholder="如 2fa.example.com 或 192.168.1.9:8080" autocomplete="off" />
+                        <button class="btn-secondary" id="addWhitelistBtn">
+                            <svg class="ico"><use href="#i-plus"></use></svg> 添加
+                        </button>
+                    </div>
+                    <div class="whitelist-list" id="whitelistList"></div>
+                    <p class="network-note" id="whitelistNote"></p>
+                </div>
             </div>
 
             <div id="remotePanel" style="display:none;margin-top:16px">
@@ -488,10 +518,16 @@
                 testBtn: document.getElementById('testRemoteBtn'),
                 docsBtn: document.getElementById('docsBtn'),
                 applyBtn: document.getElementById('applyBtn'),
-                currentUser: document.getElementById('currentUser')
+                currentUser: document.getElementById('currentUser'),
+                wlInput: document.getElementById('whitelistInput'),
+                wlAddBtn: document.getElementById('addWhitelistBtn'),
+                wlList: document.getElementById('whitelistList'),
+                wlNote: document.getElementById('whitelistNote')
             };
 
             let currentMode = ApiClient.LOCAL;
+            let extraHosts = [];
+            let localAddresses = [];
 
             function desktopApi() {
                 return window.pywebview && window.pywebview.api ? window.pywebview.api : null;
@@ -511,6 +547,86 @@
                     item.classList.toggle('active', item.dataset.mode === currentMode);
                 });
             }
+
+            // ===== Host / Origin 白名单 =====
+            // 监听地址属于本机（回环 / 通配 / 本机网卡 IP）时开放通道；
+            // 指向其它机器的地址关闭通道（后端同样会拒绝写入）。
+            function hostAllowsWhitelist(value) {
+                const text = String(value || '').trim();
+                if (!text || text === '127.0.0.1' || text === '::1' || text === 'localhost') return true;
+                if (text === '0.0.0.0' || text === '::' || text === '*') return true;
+                return localAddresses.indexOf(text) >= 0;
+            }
+
+            function renderWhitelist() {
+                const gated = hostAllowsWhitelist(els.host.value);
+                const editable = gated && !!desktopApi();
+                els.wlInput.disabled = !editable;
+                els.wlAddBtn.disabled = !editable;
+                if (!gated) {
+                    els.wlNote.textContent = '监听地址 ' + (els.host.value.trim() || '—')
+                        + ' 不属于本机，白名单通道已关闭；改为 127.0.0.1、0.0.0.0 或本机网卡 IP 后可添加。';
+                } else if (!editable) {
+                    els.wlNote.textContent = '当前不在桌面端中，无法修改白名单。';
+                } else {
+                    els.wlNote.textContent = '追加放行的来源：填主机或「主机:端口」，不要带 http:// 与路径。监听地址属于本机（127.0.0.1 / 0.0.0.0 / 本机网卡 IP）时可用。';
+                }
+
+                els.wlList.textContent = '';
+                extraHosts.forEach(function (item) {
+                    const chip = document.createElement('span');
+                    chip.className = 'whitelist-chip';
+                    chip.appendChild(document.createTextNode(item));
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.title = '移除';
+                    remove.textContent = '×';
+                    remove.addEventListener('click', function () {
+                        saveWhitelist(extraHosts.filter(function (entry) { return entry !== item; }));
+                    });
+                    chip.appendChild(remove);
+                    els.wlList.appendChild(chip);
+                });
+            }
+
+            function saveWhitelist(list) {
+                const api = desktopApi();
+                if (!api || !api.save_extra_hosts) {
+                    Toast.warn('白名单只能在桌面端中修改');
+                    return;
+                }
+                els.wlAddBtn.disabled = true;
+                api.save_extra_hosts(list).then(function (res) {
+                    if (!res || !res.ok) {
+                        Toast.error((res && res.error) || '保存白名单失败');
+                        return;
+                    }
+                    extraHosts = ((res && res.config) || {}).extraHosts || list;
+                    els.wlInput.value = '';
+                    Toast.success('白名单已生效');
+                }).catch(function (err) {
+                    Toast.error('保存白名单失败：' + ((err && err.message) || '未知错误'));
+                }).then(function () {
+                    renderWhitelist();
+                });
+            }
+
+            function addWhitelist() {
+                const value = els.wlInput.value.trim();
+                if (!value) { Toast.warn('请输入要放行的主机'); return; }
+                if (/:\/\//.test(value) || value.indexOf('/') >= 0 || value.indexOf('*') >= 0) {
+                    Toast.warn('只填主机或「主机:端口」，不要带协议、路径或通配符');
+                    return;
+                }
+                if (extraHosts.indexOf(value) >= 0) { Toast.warn('该地址已在白名单中'); return; }
+                saveWhitelist(extraHosts.concat([value]));
+            }
+
+            els.wlAddBtn.addEventListener('click', addWhitelist);
+            els.wlInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); addWhitelist(); }
+            });
+            els.host.addEventListener('input', renderWhitelist);
 
             // 页面加载时保活一次，避免从主页导航过来时触发服务退出；同时展示当前连接状态
             ApiClient.info().then(function (res) {
@@ -575,7 +691,10 @@
                         els.port.value = config.port || '';
                         els.remoteUrl.value = config.remoteUrl || '';
                         els.remoteToken.value = config.remoteToken || '';
+                        extraHosts = config.extraHosts || [];
+                        localAddresses = config.localAddresses || [];
                         showMode(config.mode || ApiClient.LOCAL);
+                        renderWhitelist();
                         if (config.docsUrl) setStatus('接口文档：' + config.docsUrl);
                     }).catch(function () {
                         showMode(ApiClient.LOCAL);
@@ -590,6 +709,7 @@
                 });
                 els.host.value = localStorage.getItem('2fa_server_host') || '';
                 els.port.value = localStorage.getItem('2fa_server_port') || '';
+                renderWhitelist();
             }
 
             function startSystemListener() {

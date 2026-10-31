@@ -62,7 +62,7 @@ def validate_listen(host, port, check_port: bool = True):
         text = "0.0.0.0"
     if not apiconfig.host_resolvable(text):
         raise ValueError(f"无法解析监听地址：{text}")
-    loopback = {apiconfig.DEFAULT_HOST, "::1", "localhost"}
+    loopback = apiconfig.LOOPBACK_HOSTS
     if not is_wildcard_host(text) and text not in loopback and text not in local_addresses():
         raise ValueError(f"{text} 不是本机可用地址，请填写 127.0.0.1、0.0.0.0 或本机网卡 IP")
     value = parse_port(port)
@@ -83,6 +83,7 @@ def create_server(vault, username: str, network=None, idle_timeout=None, serve_s
         serve_static=serve_static,
         access_token=network.get("accessToken") or None,
         mode=network.get("mode") or apiconfig.LOCAL_MODE,
+        extra_hosts=network.get("extraHosts"),
     )
 
 
@@ -97,7 +98,7 @@ def resolve_port_conflict(network: dict, requested_port) -> tuple:
     host = network.get("host") or apiconfig.DEFAULT_HOST
     host_ok = apiconfig.host_resolvable(host) and (
         is_wildcard_host(host) or host in local_addresses()
-        or host in {apiconfig.DEFAULT_HOST, "::1", "localhost"}
+        or host in apiconfig.LOOPBACK_HOSTS
     )
     if host_ok and port_available(host, requested_port):
         return requested_port, None
@@ -184,7 +185,7 @@ def apply_listen_change(ctx: dict, on_reset, host, port, loader=None) -> dict:
             vault, resource_path("web"), host=host_value, port=port_value,
             idle_timeout=None, username=ctx.get("username") or "",
             serve_static=True, access_token=network.get("accessToken") or None,
-            mode=apiconfig.LOCAL_MODE,
+            mode=apiconfig.LOCAL_MODE, extra_hosts=network.get("extraHosts"),
         )
 
     if old is not None:
@@ -749,6 +750,31 @@ def run_gui() -> int:
 
             return apply_listen_change(ctx, handle_reset, host, port, loader=loader)
 
+        def save_extra_hosts(self, hosts=None):
+            """覆盖 Host / Origin 白名单，并让运行中的服务立即生效
+
+            仅监听地址属于本机（回环 / 通配 / 本机网卡 IP）时可用，其余情况直接拒绝。
+            """
+            try:
+                entries = apiconfig.normalize_extra_hosts(hosts)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+
+            server = ctx.get("server")
+            # 以「实际生效的监听地址」判权，避免页面上改了 IP 却按旧配置放行
+            effective = server.host if server is not None \
+                else apiconfig.load_connection_config().get("host")
+            try:
+                apiconfig.save_connection_config(host=effective, extra_hosts=entries)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+
+            # 白名单在服务构造时展开，就地重建即可，不必重启服务（避免令牌轮换）
+            if server is not None:
+                server.extra_hosts = entries
+                server.build_access_lists()
+            return {"ok": True, "config": apiconfig.client_config(), "restarted": False}
+
         def save_remote_config(self, url="", token=""):
             """保存远程 API 基址与访问令牌"""
             try:
@@ -1297,7 +1323,8 @@ def run_console() -> int:
 # ------------------------------------------------------------------
 # 服务端模式（headless）：对外提供 REST API，供桌面端 / 远程客户端连接
 # ------------------------------------------------------------------
-def run_api_server(host=None, port=None, token=None, static: bool = True) -> int:
+def run_api_server(host=None, port=None, token=None, static: bool = True,
+                   extra_hosts=None) -> int:
     """无界面 API 服务：解锁保险库后常驻提供 /api/*"""
     unlocked = unlock_interactive()
     if not unlocked:
@@ -1313,9 +1340,23 @@ def run_api_server(host=None, port=None, token=None, static: bool = True) -> int
     access_token = (str(token).strip() if token else "") or network.get("accessToken") \
         or secrets.token_urlsafe(32)
     generated = not token and not network.get("accessToken")
+
+    # 追加白名单仅在 127.0.0.1 / 0.0.0.0 监听时开放
+    extra = None
+    if extra_hosts:
+        try:
+            extra = apiconfig.normalize_extra_hosts(extra_hosts)
+        except ValueError as exc:
+            print(f"[错误] {exc}")
+            vault.clear()
+            return 1
     try:
         apiconfig.save_connection_config(host=network["host"], port=network["port"],
-                                         access_token=access_token)
+                                         access_token=access_token, extra_hosts=extra)
+    except ValueError as exc:
+        print(f"[错误] {exc}")
+        vault.clear()
+        return 1
     except Exception:
         pass
 
@@ -1323,7 +1364,8 @@ def run_api_server(host=None, port=None, token=None, static: bool = True) -> int
         server = LocalServer(vault, resource_path("web"), host=network["host"],
                              port=network["port"], idle_timeout=None, username=username,
                              serve_static=static, access_token=access_token,
-                             cors_origins=["*"], mode=apiconfig.LOCAL_MODE)
+                             cors_origins=["*"], mode=apiconfig.LOCAL_MODE,
+                             extra_hosts=extra)
         started = server.start()
     except BindError as exc:
         print(f"[错误] {exc}")
@@ -1348,6 +1390,11 @@ def run_api_server(host=None, port=None, token=None, static: bool = True) -> int
     print(f" 当前用户 : {username}")
     print(f" 用户数据 : {data_root()}")
     print(f" 可访问地址: {', '.join(server.access_urls())}")
+    if server.extra_hosts:
+        print(f" 追加白名单: {', '.join(server.extra_hosts)}")
+    else:
+        print(" 追加白名单: 无" + ("（监听地址不属于本机，通道已关闭）"
+                                 if not apiconfig.extra_hosts_allowed(server.host) else ""))
     print(f" 接口文档 : {base}/api/docs")
     print(f" OpenAPI  : {base}/api/openapi.json")
     if static:
@@ -1392,6 +1439,8 @@ def build_argparser(argv=None):
                         help="对外访问令牌（留空沿用配置或随机生成）")
     parser.add_argument("--no-static", dest="static", action="store_false",
                         help="serve 模式下不挂载前端静态资源（纯 API）")
+    parser.add_argument("--allow-host", dest="allow_hosts", action="append", default=None,
+                        help="追加 Host / Origin 白名单，可重复；仅监听地址属于本机时可用")
     parser.add_argument("--version", action="version", version=f"156-2FA API {API_VERSION}")
     return parser.parse_args(argv)
 
@@ -1418,7 +1467,8 @@ def run(argv=None):
 
     # 1. 服务端模式：无需图形环境，直接常驻提供 API
     if args.command == "serve":
-        return run_api_server(host=args.host, port=args.port, token=args.token, static=args.static)
+        return run_api_server(host=args.host, port=args.port, token=args.token, static=args.static,
+                              extra_hosts=args.allow_hosts)
 
     # 2. 优先使用 pywebview 图形窗口；不可用时回退到控制台模式
     try:

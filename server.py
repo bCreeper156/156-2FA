@@ -50,7 +50,8 @@ class LocalServer:
 
     def __init__(self, vault, web_dir: str, host: str = apiconfig.DEFAULT_HOST, port=None,
                  idle_timeout=IDLE_TIMEOUT, username: str = "", serve_static: bool = True,
-                 access_token: str = None, cors_origins: list = None, mode: str = apiconfig.LOCAL_MODE):
+                 access_token: str = None, cors_origins: list = None, mode: str = apiconfig.LOCAL_MODE,
+                 extra_hosts=None):
         self.vault = vault
         self.username = username or ""
         self.frontend_token = secrets.token_urlsafe(32)
@@ -67,6 +68,8 @@ class LocalServer:
         # 对外开放 API 的长期令牌（远程客户端使用）；为空表示禁用远程令牌
         self.access_token = (str(access_token).strip() if access_token else "") or None
         self.cors_origins = list(cors_origins) if cors_origins else ["*"]
+        # 用户追加的 Host / Origin 白名单（仅 127.0.0.1 / 通配监听时生效）
+        self.extra_hosts = apiconfig.normalize_extra_hosts(extra_hosts)
 
         self.httpd = None
         self._thread = None
@@ -78,11 +81,11 @@ class LocalServer:
         # 重置程序时的关闭回调，由宿主（main.py）注册；未注册时仅重置数据
         self.on_reset = None
 
-        self._build_access_lists()
+        self.build_access_lists()
 
     # ---------- 来源白名单 ----------
-    def _build_access_lists(self):
-        """构造 Host / Origin 白名单
+    def build_access_lists(self):
+        """构造 Host / Origin 白名单（配置变更后可就地重新调用）
 
         通配地址（0.0.0.0 / ::）时枚举本机全部地址，
         否则只包含配置的地址与回环地址，兼顾自定义 IP 与 DNS Rebinding 防护。
@@ -106,6 +109,27 @@ class LocalServer:
             origins.add(f"http://{label}:{self.port}")
         if not apiconfig.is_wildcard_host(self.host):
             origins.add(f"http://{self.host}:{self.port}")
+
+        # 用户追加的白名单：仅当监听模式开放该通道时生效（防御历史 / 手工改坏的配置）
+        if apiconfig.extra_hosts_allowed(self.host):
+            try:
+                entries = apiconfig.normalize_extra_hosts(self.extra_hosts)
+            except ValueError:
+                entries = []
+            for entry in entries:
+                name, port_value = apiconfig.split_extra_host(entry)
+                if not name:
+                    continue
+                label = ("[" + name + "]" if apiconfig.is_ipv6(name) else name).lower()
+                port_value = port_value or self.port
+                hosts.add(label)
+                hosts.add(f"{label}:{port_value}")
+                # 同时放行 http / https 与「带端口 / 不带端口」两种写法：
+                # 浏览器对 80 / 443 等默认端口不会在 Origin 里带端口，反代场景还会是 https
+                for scheme in ("http", "https"):
+                    origins.add(f"{scheme}://{label}")
+                    origins.add(f"{scheme}://{label}:{port_value}")
+
         self.allowed_hosts = hosts
         self.allowed_origins = origins
 
@@ -134,7 +158,7 @@ class LocalServer:
         self.httpd.daemon_threads = True
         self.port = self.httpd.server_address[1]
         self.requested_port = self.port
-        self._build_access_lists()
+        self.build_access_lists()
         self._stopping = False
         self.last_seen = time.time()
         self._thread = threading.Thread(target=self.httpd.serve_forever, name="http-server", daemon=True)
@@ -358,11 +382,12 @@ def _make_handler(app: LocalServer):
             """来源校验：Host + Origin 白名单，远程令牌直接放行"""
             if self._remote_ok():
                 return True
-            host = (self.headers.get("Host") or "").strip()
+            # 主机名大小写不敏感（浏览器可能原样透传用户输入的域名）
+            host = (self.headers.get("Host") or "").strip().lower()
             if host not in app.allowed_hosts:
                 return False
-            origin = self.headers.get("Origin")
-            if origin and origin not in app.allowed_origins:
+            origin = (self.headers.get("Origin") or "").strip()
+            if origin and origin.lower() not in app.allowed_origins:
                 return False
             return True
 

@@ -42,6 +42,20 @@
 跨域已支持 CORS 预检：`Origin` 受白名单控制（默认允许全部），响应会带
 `Access-Control-Allow-Origin` 等头。远程模式使用 Bearer 令牌，不依赖 Cookie。
 
+### Host / Origin 白名单
+
+除 Bearer 令牌外的调用方还需通过来源校验（`Host` 必须命中白名单，携带 `Origin` 时同样需命中）。
+
+- 白名单默认由监听地址推导：回环地址始终在内，通配监听（`0.0.0.0` / `::`）时为本机全部地址；
+- **手动追加入口在监听地址属于本机时开放**：回环 `127.0.0.1`、通配 `0.0.0.0` / `::`，
+  以及本机网卡 IP（如 `192.168.1.9`）都可添加；
+  入口为设置页「Host / Origin 白名单」，或 `serve --allow-host 2fa.example.com`（可重复，写入 `server.json` 的 `extraHosts`）；
+- 监听地址不属于本机时（配置被改坏、或迁移后该 IP 已不属于本机）通道关闭：
+  追加请求会被拒绝，已保存的条目也会在切换过去时自动清空。
+
+条目写法为 `主机` 或 `主机:端口`（IPv6 用 `[::1]:端口`），不带协议与路径；
+追加项会同时放行 `http` / `https` 与「带端口 / 不带端口」两种来源写法，便于反向代理场景。
+
 ---
 
 ## 2. 接口一览
@@ -326,6 +340,9 @@ python main.py serve --host 0.0.0.0 --port 8765 --token your-secret-token --no-s
 
 # 不指定 --token 时会随机生成并写入 data/server.json
 python main.py serve --host 0.0.0.0 --port 8765
+
+# 追加 Host / Origin 白名单（监听地址属于本机时可用，可重复使用）
+python main.py serve --host 0.0.0.0 --port 8765 --allow-host 2fa.example.com --allow-host 192.168.1.9:8080
 ```
 
 启动后会打印可用地址、接口文档地址与令牌。令牌也可通过环境变量提供（优先级最高）：
@@ -355,7 +372,8 @@ set TOTP_API_TOKEN=your-secret-token           # Windows CMD
   "port": null,
   "remoteUrl": "http://192.168.1.9:8765",
   "remoteToken": "your-secret-token",
-  "accessToken": ""
+  "accessToken": "",
+  "extraHosts": []
 }
 ```
 

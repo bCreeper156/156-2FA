@@ -19,6 +19,7 @@ Copyright (c) 2026
 import json
 import os
 import random
+import re
 import socket
 import sys
 
@@ -30,11 +31,13 @@ ENV_ACCESS_TOKEN = "TOTP_API_TOKEN"
 DEFAULT_HOST = "127.0.0.1"
 # 通配地址：监听本机全部网卡
 WILDCARD_HOSTS = {"", "*", "0.0.0.0", "::"}
+# 回环写法：与 DEFAULT_HOST 等价，都只暴露给本机
+LOOPBACK_HOSTS = {DEFAULT_HOST, "::1", "localhost"}
 PORT_RANGE_START = 30000
 PORT_RANGE_END = 60000
 
 CONFIG_FILE = "server.json"
-CONFIG_VERSION = 2
+CONFIG_VERSION = 3
 LOCAL_MODE = "local"
 REMOTE_MODE = "remote"
 
@@ -105,6 +108,82 @@ def url_host(host) -> str:
     if is_ipv6(text) and not text.startswith("["):
         return "[" + text + "]"
     return text
+
+
+def extra_hosts_allowed(host) -> bool:
+    """是否开放「追加 Host / Origin 白名单」通道
+
+    只要监听地址属于本机就开放：回环地址、通配地址、本机网卡 IP 均可
+    （这几类地址的访问来源都需要用户补充，例如反向代理域名、其它网卡地址）。
+
+    不属于本机的地址（配置被手工改坏、或迁移后 IP 已不再属于本机）时关闭，
+    避免为一个本机都绑不上的地址放宽来源限制。
+    """
+    text = normalize_host(host)
+    if text in WILDCARD_HOSTS or text in LOOPBACK_HOSTS:
+        return True
+    return text in local_addresses()
+
+
+def split_extra_host(value):
+    """拆分白名单条目为 (主机, 端口或 None)；非法格式抛 ValueError
+
+    接受 `host`、`host:port` 与 IPv6 的 `[::1]:port` 写法；
+    拒绝协议前缀、路径、通配符，避免把 `http://` 或 `*` 写进白名单。
+    """
+    text = "" if value is None else str(value).strip().rstrip("/")
+    if not text:
+        return "", None
+    lowered = text.lower()
+    if "://" in lowered or "/" in text or "?" in text or "*" in text:
+        raise ValueError("白名单只填主机或主机:端口（如 192.168.1.9:8080），"
+                         "不要带协议、路径或通配符：" + text)
+    if text.startswith("["):
+        end = text.find("]")
+        if end < 0:
+            raise ValueError("IPv6 白名单缺少右方括号：" + text)
+        host_part = text[1:end].strip()
+        rest = text[end + 1:].strip()
+        port_text = rest[1:].strip() if rest.startswith(":") else ""
+        if rest and not rest.startswith(":"):
+            raise ValueError("IPv6 白名单端口请写成 [::1]:端口 形式：" + text)
+    else:
+        if text.count(":") > 1:
+            raise ValueError("IPv6 白名单请写成 [2001:db8::1] 形式：" + text)
+        host_part, _, port_text = text.partition(":")
+        host_part = host_part.strip()
+        port_text = port_text.strip()
+    if not host_part:
+        raise ValueError("白名单主机不能为空：" + text)
+    port_value = parse_port(port_text) if port_text else None
+    return host_part, port_value
+
+
+def parse_extra_host(value) -> str:
+    """规范化单条白名单：`host` 或 `[ipv6]:port`；空值返回空串"""
+    host_part, port_value = split_extra_host(value)
+    if not host_part:
+        return ""
+    label = ("[" + host_part + "]" if is_ipv6(host_part) else host_part).lower()
+    return f"{label}:{port_value}" if port_value else label
+
+
+def normalize_extra_hosts(value) -> list:
+    """规范化白名单列表：接受列表，或逗号 / 分号 / 空白分隔的字符串"""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        items = re.split(r"[,;\s]+", value)
+    elif isinstance(value, (list, tuple, set)):
+        items = list(value)
+    else:
+        items = [value]
+    result = []
+    for item in items:
+        entry = parse_extra_host(item)
+        if entry and entry not in result:
+            result.append(entry)
+    return result
 
 
 def parse_port(port):
@@ -260,6 +339,8 @@ def _default_config() -> dict:
         "remoteUrl": "",
         "remoteToken": "",
         "accessToken": "",
+        # 用户追加的 Host / Origin 白名单（仅在 127.0.0.1 / 通配监听时可编辑）
+        "extraHosts": [],
     }
 
 
@@ -303,6 +384,13 @@ def load_connection_config() -> dict:
             config["remoteUrl"] = ""
         config["remoteToken"] = str(raw.get("remoteToken") or "").strip()
         config["accessToken"] = str(raw.get("accessToken") or "").strip()
+        try:
+            config["extraHosts"] = normalize_extra_hosts(raw.get("extraHosts"))
+        except ValueError:
+            config["extraHosts"] = []
+        # 历史配置或手工改过 host 的情况：通道关闭时不允许残留白名单
+        if not extra_hosts_allowed(config["host"]):
+            config["extraHosts"] = []
 
     # 环境变量优先级最高，便于服务端部署时不落盘令牌
     env_token = os.environ.get(ENV_ACCESS_TOKEN)
@@ -312,8 +400,13 @@ def load_connection_config() -> dict:
 
 
 def save_connection_config(mode=None, host=None, port=None,
-                           remote_url=None, remote_token=None, access_token=None) -> dict:
-    """局部更新并保存连接配置；返回保存后的完整配置"""
+                           remote_url=None, remote_token=None, access_token=None,
+                           extra_hosts=None) -> dict:
+    """局部更新并保存连接配置；返回保存后的完整配置
+
+    extra_hosts：追加的 Host / Origin 白名单。
+    传入 None 表示不改动；监听地址不支持时若已存在条目会被清空（通道关闭）。
+    """
     current = load_connection_config()
 
     if mode is not None:
@@ -335,6 +428,16 @@ def save_connection_config(mode=None, host=None, port=None,
     if access_token is not None and not os.environ.get(ENV_ACCESS_TOKEN):
         current["accessToken"] = "" if access_token is None else str(access_token).strip()
 
+    if extra_hosts is not None:
+        wanted = normalize_extra_hosts(extra_hosts)
+        if wanted and not extra_hosts_allowed(current["host"]):
+            raise ValueError("仅监听地址属于本机时可添加白名单"
+                             "（127.0.0.1 / 0.0.0.0 / 本机网卡 IP），当前为 " + current["host"])
+        current["extraHosts"] = wanted
+    elif not extra_hosts_allowed(current["host"]):
+        # 监听地址已不支持：关闭通道并清掉残留条目
+        current["extraHosts"] = []
+
     current["version"] = CONFIG_VERSION
     os.makedirs(os.path.dirname(config_path()), exist_ok=True)
     with open(config_path(), "w", encoding="utf-8") as fh:
@@ -352,4 +455,8 @@ def client_config() -> dict:
         "remoteUrl": config["remoteUrl"],
         "remoteToken": config["remoteToken"],
         "hasAccessToken": bool(config["accessToken"]),
+        "extraHosts": config["extraHosts"],
+        "whitelistEditable": extra_hosts_allowed(config["host"]),
+        # 供前端在用户修改监听 IP 时即时判断通道是否可用
+        "localAddresses": local_addresses(),
     }
