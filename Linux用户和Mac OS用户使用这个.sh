@@ -70,8 +70,10 @@ $PYTHON_CMD -m PyInstaller \
     --onefile \
     --windowed \
     --name "2FA-Tool" \
-    --add-data "web/index.html:web" \
-    --add-data "web/settings.html:web" \
+    --add-data "web:web" \
+    --hidden-import cryptography \
+    --hidden-import argon2 \
+    --hidden-import cv2 \
     main.py
 
 if [ $? -eq 0 ]; then

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>156-2FA · API 文档</title>
+    <style>
+        :root {
+            --bg: #f5f7fb; --surface: #ffffff; --border: #e2e8f0; --text: #1e293b;
+            --muted: #64748b; --primary: #1a73e8; --primary-soft: #e8f1fd;
+            --ok: #0f7b3a; --warn: #b45309; --method-post: #0b7a3f; --method-get: #1a73e8;
+            --method-put: #b45309; --method-delete: #c62828;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #16191e; --surface: #20242a; --border: #333a44; --text: #e6edf5;
+                --muted: #9aa7b8; --primary: #6aa6ff; --primary-soft: #1e2b40;
+                --ok: #4ade80; --warn: #fbbf24;
+                --method-post: #4ade80; --method-get: #6aa6ff; --method-put: #fbbf24; --method-delete: #f87171;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0 20px 60px;
+            font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+        }
+        .wrap { max-width: 960px; margin: 0 auto; }
+        header { padding: 34px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        h1 { margin: 0 0 6px; font-size: 27px; letter-spacing: .2px; }
+        h1 small { font-size: 14px; color: var(--muted); font-weight: 500; margin-left: 8px; }
+        .lead { margin: 0; color: var(--muted); font-size: 14px; }
+        .bar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; align-items: center; }
+        input {
+            border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface);
+            color: var(--text); padding: 9px 12px; font: inherit; font-size: 13px; min-width: 190px;
+        }
+        input:focus { outline: none; border-color: var(--primary); }
+        button {
+            border: none; border-radius: 10px; background: var(--primary); color: #fff;
+            padding: 9px 18px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        button.ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+        button:disabled { opacity: .6; cursor: default; }
+        .status { font-size: 13px; color: var(--muted); }
+        .status.error { color: var(--warn); }
+        .tag-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 10px; }
+        .tag-nav button { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+        .tag-nav button.active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+        .endpoint {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+            padding: 16px 18px; margin-bottom: 14px;
+        }
+        .endpoint h3 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .method {
+            font-size: 11px; font-weight: 700; letter-spacing: .6px; color: #fff;
+            padding: 3px 9px; border-radius: 6px; background: var(--method-get); text-transform: uppercase;
+        }
+        .method.post { background: var(--method-post); }
+        .method.put { background: var(--method-put); }
+        .method.delete { background: var(--method-delete); }
+        code.path { font-size: 13.5px; background: var(--primary-soft); color: var(--primary); padding: 2px 7px; border-radius: 6px; }
+        p.desc { margin: 6px 0 12px; color: var(--muted); font-size: 13.5px; }
+        details { margin-top: 10px; }
+        summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); padding: 4px 0; }
+        pre {
+            background: rgba(127, 127, 127, .1); border: 1px solid var(--border); border-radius: 10px;
+            padding: 12px 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.6; margin: 8px 0 0;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+        th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-weight: 600; }
+        .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); }
+        .footnote { color: var(--muted); font-size: 12.5px; margin-top: 24px; }
+        .sec-title { margin: 26px 0 6px; font-size: 15px; font-weight: 700; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>156-2FA API 文档<small id="version">载入中…</small></h1>
+        <p class="lead">
+            前端与后端完全分离：所有数据都通过下列 REST 接口获取，密钥与口令不会出现在任何响应中。
+            机器可读规范：<code>/api/openapi.json</code>。
+        </p>
+        <div class="bar">
+            <input id="baseUrl" placeholder="服务地址，例如 http://127.0.0.1:41234" />
+            <input id="token" type="password" placeholder="访问令牌 Bearer <token>（可选）" />
+            <button id="reload">载入规范</button>
+            <button class="ghost" id="sameOriginBtn">使用同源服务</button>
+            <span class="status" id="status"></span>
+        </div>
+    </header>
+
+    <div class="sec-title">鉴权方式</div>
+    <p class="lead">
+        <span class="pill">推荐</span> <code>Authorization: Bearer &lt;accessToken&gt;</code>：远程 / 第三方客户端使用，不受来源限制。<br />
+        <span class="pill">桌面端</span> Cookie <code>2fa_frontend</code> 或 URL 参数 <code>?token=</code>：桌面窗口会话，受 Host / Origin 白名单保护。<br />
+        跨域调用已内置 CORS 预检支持。
+    </p>
+
+    <div class="tag-nav" id="tagNav"></div>
+    <div id="endpoints"></div>
+
+    <p class="footnote">
+        出错时统一返回 <code>{ "ok": false, "error": "原因" }</code> 及对应状态码：400 参数错误、403 无权限、404 资源不存在、500 服务端失败。
+    </p>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    var els = {
+        base: document.getElementById('baseUrl'),
+        token: document.getElementById('token'),
+        reload: document.getElementById('reload'),
+        sameOrigin: document.getElementById('sameOriginBtn'),
+        status: document.getElementById('status'),
+        nav: document.getElementById('tagNav'),
+        list: document.getElementById('endpoints'),
+        version: document.getElementById('version')
+    };
+
+    var spec = null;
+    var activeTag = null;
+
+    function setStatus(text, isError) {
+        els.status.textContent = text || '';
+        els.status.className = 'status' + (isError ? ' error' : '');
+    }
+
+    function escapeHtml(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function resolveRef(ref) {
+        if (!ref || ref.indexOf('#/components/schemas/') !== 0) return null;
+        if (!spec || !spec.components || !spec.components.schemas) return null;
+        return spec.components.schemas[ref.split('/').pop()] || null;
+    }
+
+    function sample(schema, depth) {
+        depth = depth || 0;
+        if (!schema || depth > 4) return null;
+        if (schema.$ref) return sample(resolveRef(schema.$ref), depth + 1);
+        if (schema.example !== undefined) return schema.example;
+        if (schema.type === 'array') return [sample(schema.items, depth + 1)];
+        if (schema.enum) return schema.enum[0];
+        if (schema.type === 'object' || schema.properties) {
+            var out = {};
+            Object.keys(schema.properties || {}).forEach(function (key) {
+                var prop = schema.properties[key];
+                var value = prop.example !== undefined ? prop.example : sample(prop, depth + 1);
+                if (value === undefined || value === null) {
+                    value = prop.enum ? prop.enum[0] : (prop.type === 'integer' || prop.type === 'number' ? 0 : '');
+                }
+                out[key] = value;
+            });
+            return out;
+        }
+        return schema.type === 'integer' || schema.type === 'number' ? 0 : '';
+    }
+
+    function renderParameters(params) {
+        if (!params || !params.length) return '';
+        var rows = params.map(function (param) {
+            return '<tr><td>' + escapeHtml(param.name) + '</td><td>' + escapeHtml(param.in) +
+                '</td><td>' + (param.required ? '必填' : '可选') + '</td><td>' +
+                escapeHtml(param.description || '') + '</td></tr>';
+        }).join('');
+        return '<details><summary>参数</summary><table><tr><th>名称</th><th>位置</th><th>必填</th>' +
+            '<th>说明</th></tr>' + rows + '</table></details>';
+    }
+
+    function curlExample(method, path, hasBody, token) {
+        var base = (els.base.value || 'http://127.0.0.1:8080').replace(/\/+$/, '');
+        var lines = ['curl -X ' + method + ' "' + base + path + '"', '  -H "Accept: application/json"'];
+        if (token) lines.push('  -H "Authorization: Bearer ' + token + '"');
+        if (hasBody) {
+            lines.push('  -H "Content-Type: application/json"');
+            lines.push("  -d '{ ... }'");
+        }
+        return lines.join(' \\\n');
+    }
+
+    function renderEndpoint(path, method, operation) {
+        var card = document.createElement('div');
+        card.className = 'endpoint';
+        var tags = operation.tags || [];
+        card.style.display = (!activeTag || tags.indexOf(activeTag) >= 0) ? '' : 'none';
+
+        var media = operation.requestBody && operation.requestBody.content
+            ? operation.requestBody.content['application/json'] : null;
+        var bodyExample = media ? sample(media.schema, 0) : null;
+        var okResponse = (operation.responses || {})['200'];
+        var okSchema = okResponse && okResponse.content
+            ? (okResponse.content['application/json'] || okResponse.content['text/plain']) : null;
+
+        var html = '<h3><span class="method ' + method + '">' + method + '</span>' +
+            '<code class="path">' + escapeHtml(path) + '</code></h3>' +
+            '<p class="desc">' + escapeHtml(operation.summary || '') +
+            (operation.description ? '<br>' + escapeHtml(operation.description).replace(/\n/g, '<br>') : '') +
+            '</p>';
+
+        html += renderParameters(operation.parameters);
+        html += '<details><summary>curl 示例</summary><pre>' +
+            escapeHtml(curlExample(method.toUpperCase(), path, !!media, els.token.value.trim())) +
+            '</pre></details>';
+        if (bodyExample) {
+            html += '<details><summary>请求体示例</summary><pre>' +
+                escapeHtml(JSON.stringify(bodyExample, null, 2)) + '</pre></details>';
+        }
+        if (okSchema && okSchema.schema) {
+            html += '<details><summary>成功响应示例</summary><pre>' +
+                escapeHtml(JSON.stringify(sample(okSchema.schema, 0), null, 2)) + '</pre></details>';
+        }
+        card.innerHTML = html;
+        return card;
+    }
+
+    function render() {
+        els.list.innerHTML = '';
+        els.nav.innerHTML = '';
+        (spec.tags || []).forEach(function (tag) {
+            var button = document.createElement('button');
+            button.textContent = tag.name;
+            if (activeTag === tag.name) button.className = 'active';
+            button.addEventListener('click', function () {
+                activeTag = (activeTag === tag.name) ? null : tag.name;
+                render();
+            });
+            els.nav.appendChild(button);
+        });
+
+        Object.keys(spec.paths || {}).forEach(function (path) {
+            ['get', 'post', 'put', 'delete'].forEach(function (method) {
+                var operation = spec.paths[path][method];
+                if (operation) els.list.appendChild(renderEndpoint(path, method, operation));
+            });
+        });
+    }
+
+    function load() {
+        var base = (els.base.value || '').replace(/\/+$/, '');
+        if (!base) {
+            setStatus('请填写服务地址', true);
+            return;
+        }
+        els.reload.disabled = true;
+        setStatus('正在载入…');
+        fetch(base + '/api/openapi.json', { cache: 'no-store' })
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(function (payload) {
+                spec = payload;
+                els.version.textContent = 'v' + (payload.info && payload.info.version || '');
+                var server = payload.servers && payload.servers[0] ? payload.servers[0].url : base;
+                setStatus('已载入 ' + server);
+                activeTag = null;
+                render();
+            })
+            .catch(function (err) {
+                setStatus('载入失败：' + err.message, true);
+            })
+            .then(function () {
+                els.reload.disabled = false;
+            });
+    }
+
+    els.base.value = (location.origin && location.origin.indexOf('http') === 0) ? location.origin : '';
+    els.reload.addEventListener('click', load);
+    // 令牌变化时刷新 curl 示例
+    els.token.addEventListener('input', function () {
+        if (spec) render();
+    });
+    els.sameOrigin.addEventListener('click', function () {
+        els.base.value = (location.origin && location.origin.indexOf('http') === 0) ? location.origin : '';
+        load();
+    });
+    els.base.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') load();
+    });
+
+    if (els.base.value) load();
+})();
+</script>
+</body>
+</html>

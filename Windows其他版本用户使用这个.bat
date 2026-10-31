@@ -90,9 +90,9 @@ if exist "main.spec" (
     del main.spec
 )
 
-:: 执行 PyInstaller 打包（带 --add-data）
+:: 执行 PyInstaller 打包（带 --add-data，打包整个 web 目录）
 echo 正在执行 PyInstaller 打包，请稍候...
-%PYTHON_CMD% -m PyInstaller --onefile --windowed --name "2FA-Tool" --add-data "web/index.html;web" --add-data "web/settings.html;web" main.py
+%PYTHON_CMD% -m PyInstaller --onefile --windowed --name "2FA-Tool" --add-data "web;web" --hidden-import cryptography --hidden-import argon2 --hidden-import cv2 main.py
 
 if %errorlevel% equ 0 (
     echo.

@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>主题设置 · Material</title>
-
-    <!-- Google Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0,1" />
+    <title>主题设置</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
     <style id="theme-styles">
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal;
+            font-size: inherit; line-height: 1; letter-spacing: normal; text-transform: none;
+            display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
+            -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+        }
         /* ===== 颜色主题变量 ===== */
         :root {
             --md-primary: #1A73E8;
@@ -29,7 +30,6 @@
             --md-on-surface: #1E293B;
             --md-on-surface-variant: #475569;
             --md-background: #F6F9FC;
-            --md-shadow: 0 8px 30px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
             --md-card-shadow: 0 8px 30px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
         }
 
@@ -41,52 +41,33 @@
             --md-on-surface: #E8E8E8;
             --md-on-surface-variant: #B0B0B0;
             --md-background: #1A1A1A;
-            --md-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-            --md-card-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            --md-card-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
             --md-primary-container: #1E3A5F;
             --md-on-primary-container: #E3F0FF;
             --md-on-primary: #0B1E33;
         }
-        body.dark-mode .btn-primary {
-            color: var(--md-on-primary);
-        }
-        body.dark-mode .theme-option {
-            background: var(--md-surface-variant);
-        }
-        body.dark-mode .theme-option.active {
-            background: var(--md-primary-container);
-            border-color: var(--md-primary);
-        }
-        body.dark-mode .card {
-            background: var(--md-surface);
-            box-shadow: var(--md-card-shadow);
-        }
-        body.dark-mode .header-right a {
-            color: var(--md-on-surface-variant);
-        }
-        body.dark-mode .header-right a:hover {
-            background: var(--md-surface-variant);
-        }
     </style>
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: var(--md-background);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            margin: 0;
             color: var(--md-on-surface);
-            transition: background 0.25s, color 0.25s;
+            transition: background .25s, color .25s;
+        }
+
+        /* ===== 图标 ===== */
+        .ico {
+            width: 20px; height: 20px; flex-shrink: 0;
+            fill: none; stroke: currentColor;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
         }
 
         .card {
@@ -96,49 +77,28 @@
             border-radius: 24px;
             padding: 32px 28px 36px;
             box-shadow: var(--md-card-shadow);
-            transition: background 0.25s, box-shadow 0.25s;
+            transition: background .25s, box-shadow .25s;
         }
 
         .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
             margin-bottom: 8px;
         }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
         .header-left h1 {
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
+            font-size: 26px; font-weight: 700; letter-spacing: -0.3px;
             color: var(--md-on-surface);
-            margin: 0;
         }
-        .header-left .material-symbols-outlined {
-            font-size: 32px;
-            color: var(--md-primary);
-        }
+        .header-left .ico { width: 28px; height: 28px; color: var(--md-primary); }
         .header-right a {
             color: var(--md-on-surface-variant);
             text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-weight: 500;
-            font-size: 14px;
-            padding: 6px 12px;
-            border-radius: 40px;
-            transition: background 0.2s;
+            display: flex; align-items: center; gap: 6px;
+            font-weight: 500; font-size: 14px;
+            padding: 6px 12px; border-radius: 40px;
+            transition: background .2s;
         }
-        .header-right a:hover {
-            background: var(--md-surface-variant);
-        }
-        .header-right .material-symbols-outlined {
-            font-size: 22px;
-        }
+        .header-right a:hover { background: var(--md-surface-variant); }
 
         .subhead {
             margin-bottom: 28px;
@@ -147,22 +107,14 @@
         }
 
         /* ===== 设置分组 ===== */
-        .settings-group {
-            margin-bottom: 28px;
-        }
+        .settings-group { margin-bottom: 28px; }
         .settings-group-title {
-            font-weight: 600;
-            font-size: 16px;
+            font-weight: 600; font-size: 16px;
             color: var(--md-on-surface);
             margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            display: flex; align-items: center; gap: 8px;
         }
-        .settings-group-title .material-symbols-outlined {
-            font-size: 20px;
-            color: var(--md-primary);
-        }
+        .settings-group-title .ico { color: var(--md-primary); }
 
         /* ===== 颜色主题网格 ===== */
         .theme-grid {
@@ -177,216 +129,404 @@
             text-align: center;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: border-color 0.2s, background 0.2s, transform 0.1s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
+            transition: border-color .2s, background .2s, transform .1s;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
         }
-        .theme-option:hover {
-            background: var(--md-primary-container);
-        }
-        .theme-option:active {
-            transform: scale(0.96);
-        }
+        .theme-option:hover { background: var(--md-primary-container); }
+        .theme-option:active { transform: scale(.96); }
         .theme-option.active {
             border-color: var(--md-primary);
             background: var(--md-primary-container);
         }
         .theme-option .color-preview {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 40px; height: 40px; border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
             border: 2px solid var(--md-surface);
         }
         .theme-option .theme-name {
-            font-weight: 500;
-            font-size: 13px;
+            font-weight: 500; font-size: 13px;
             color: var(--md-on-surface);
         }
         .theme-option .check-mark {
             color: var(--md-primary);
-            font-size: 18px;
+            width: 18px; height: 18px;
             display: none;
         }
-        .theme-option.active .check-mark {
-            display: inline;
+        .theme-option.active .check-mark { display: block; }
+
+        /* ===== 网络设置 ===== */
+        .network-fields { display:grid; grid-template-columns:1.4fr 1fr; gap:12px; }
+        .network-field label { display:block; margin-bottom:7px; color:var(--md-on-surface-variant); font-size:13px; font-weight:600; }
+        .network-field input { width:100%; border:1.5px solid var(--md-outline); border-radius:12px; background:var(--md-surface-variant); color:var(--md-on-surface); padding:11px 12px; font:inherit; outline:none; }
+        .network-field input:focus { border-color:var(--md-primary); }
+        .network-note { margin-top:10px; font-size:12px; line-height:1.6; color:var(--md-on-surface-variant); }
+        .network-note code { padding:1px 5px; border-radius:6px; font-size:11.5px;
+            background:var(--md-surface-variant); color:var(--md-on-surface); }
+        .network-status { margin-top:10px; font-size:12.5px; line-height:1.6; font-weight:600; color:var(--md-primary); }
+        .network-status.error { color:#D32F2F; }
+
+        /* ===== 次级按钮（测试连接 / 接口文档） ===== */
+        .btn-secondary {
+            background: var(--md-surface-variant);
+            border: 1.5px solid var(--md-outline);
+            border-radius: 40px;
+            color: var(--md-on-surface);
+            padding: 10px 20px;
+            font-weight: 600; font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: filter .15s, transform .1s;
+            display: inline-flex; align-items: center; gap: 8px;
+            margin: 0 6px 6px 0;
         }
+        .btn-secondary:hover { filter: brightness(1.05); border-color: var(--md-primary); }
+        .btn-secondary:active { transform: scale(.96); }
+        .btn-secondary:disabled { opacity: .6; cursor: default; }
 
         /* ===== 外观模式选择 ===== */
-        .mode-selector {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
+        .mode-selector { display: flex; gap: 12px; flex-wrap: wrap; }
         .mode-option {
-            flex: 1;
-            min-width: 80px;
+            flex: 1; min-width: 80px;
             background: var(--md-surface-variant);
             border-radius: 40px;
-            padding: 10px 16px;
+            padding: 11px 16px;
             text-align: center;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: border-color 0.2s, background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            font-weight: 500;
-            font-size: 14px;
+            transition: border-color .2s, background .2s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            font-weight: 500; font-size: 14px;
             color: var(--md-on-surface-variant);
         }
-        .mode-option:hover {
-            background: var(--md-primary-container);
-        }
+        .mode-option .ico { width: 18px; height: 18px; }
+        .mode-option:hover { background: var(--md-primary-container); }
         .mode-option.active {
             border-color: var(--md-primary);
             background: var(--md-primary-container);
             color: var(--md-on-primary-container);
         }
-        .mode-option .material-symbols-outlined {
-            font-size: 20px;
-        }
 
         /* ===== 应用按钮 ===== */
-        .action-row {
-            text-align: center;
-            margin-top: 12px;
-        }
+        .action-row { text-align: center; margin-top: 12px; }
         .btn-primary {
             background: var(--md-primary);
-            border: none;
-            border-radius: 40px;
+            border: none; border-radius: 40px;
             color: var(--md-on-primary);
             padding: 12px 32px;
-            font-weight: 600;
-            font-size: 15px;
-            font-family: 'Roboto', sans-serif;
+            font-weight: 600; font-size: 15px;
+            font-family: inherit;
             cursor: pointer;
-            transition: 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: filter .15s, transform .1s;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
         }
-        .btn-primary:hover {
-            background: var(--md-on-primary-container);
-            color: var(--md-primary-container);
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-primary:active { transform: scale(.96); }
+
+        /* ===== 危险操作（重置程序） ===== */
+        .danger-note {
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--md-on-surface-variant);
+            margin-bottom: 14px;
         }
-        .btn-primary:active {
-            transform: scale(0.96);
+        .btn-danger {
+            background: #D32F2F;
+            border: none; border-radius: 40px;
+            color: #FFFFFF;
+            padding: 12px 32px;
+            font-weight: 600; font-size: 15px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: filter .15s, transform .1s;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 2px 8px rgba(211,47,47,.25);
         }
-        .btn-primary .material-symbols-outlined {
-            font-size: 20px;
-        }
+        .btn-danger:hover { filter: brightness(1.08); }
+        .btn-danger:active { transform: scale(.96); }
+        .btn-danger:disabled { opacity: .6; cursor: default; }
 
         /* ===== 响应式 ===== */
         @media (max-width: 500px) {
-            .card {
-                padding: 20px 16px 28px;
-            }
-            .header-left h1 {
-                font-size: 22px;
-            }
-            .theme-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 8px;
-            }
-            .mode-selector {
-                flex-direction: row;
-            }
-            .mode-option {
-                min-width: 60px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
+            .card { padding: 20px 16px 28px; }
+            .header-left h1 { font-size: 22px; }
+            .theme-grid { gap: 8px; }
+            .mode-option { min-width: 60px; padding: 8px 12px; font-size: 13px; }
         }
     </style>
+    <script src="api.js"></script>
+    <script src="toast.js"></script>
 </head>
 <body>
 
+    <!-- 内联图标库 -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <symbol id="i-settings" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </symbol>
+        <symbol id="i-arrow-left" viewBox="0 0 24 24">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </symbol>
+        <symbol id="i-droplet" viewBox="0 0 24 24">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+        </symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </symbol>
+        <symbol id="i-monitor" viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+            <polyline points="20 6 9 17 4 12" />
+        </symbol>
+        <symbol id="i-check-circle" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="8.5 12 11 14.5 15.5 9.5" />
+        </symbol>
+        <symbol id="i-alert-triangle" viewBox="0 0 24 24">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+        </symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </symbol>
+        <symbol id="i-home" viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+        </symbol>
+        <symbol id="i-file-text" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+        </symbol>
+    </svg>
+
     <div class="card">
-        <!-- 头部 -->
         <div class="header">
             <div class="header-left">
-                <span class="material-symbols-outlined">palette</span>
+                <svg class="ico"><use href="#i-settings"></use></svg>
                 <h1>主题设置</h1>
             </div>
             <div class="header-right">
                 <a href="index.html">
-                    <span class="material-symbols-outlined">arrow_back</span> 返回
+                    <svg class="ico" style="width:18px;height:18px"><use href="#i-arrow-left"></use></svg>
+                    返回
                 </a>
             </div>
         </div>
         <div class="subhead">自定义颜色主题与外观模式</div>
 
-        <!-- ===== 颜色主题 ===== -->
         <div class="settings-group">
             <div class="settings-group-title">
-                <span class="material-symbols-outlined">color_lens</span> 颜色主题
+                <svg class="ico"><use href="#i-droplet"></use></svg>
+                颜色主题
             </div>
             <div class="theme-grid" id="themeGrid">
                 <div class="theme-option active" data-theme="blue">
-                    <div class="color-preview" style="background: #1A73E8;"></div>
+                    <div class="color-preview" style="background:#1A73E8"></div>
                     <span class="theme-name">蓝色</span>
-                    <span class="material-symbols-outlined check-mark">check_circle</span>
+                    <svg class="ico check-mark"><use href="#i-check-circle"></use></svg>
                 </div>
                 <div class="theme-option" data-theme="purple">
-                    <div class="color-preview" style="background: #7C3AED;"></div>
+                    <div class="color-preview" style="background:#7C3AED"></div>
                     <span class="theme-name">紫色</span>
-                    <span class="material-symbols-outlined check-mark">check_circle</span>
+                    <svg class="ico check-mark"><use href="#i-check-circle"></use></svg>
                 </div>
                 <div class="theme-option" data-theme="pink">
-                    <div class="color-preview" style="background: #D81B60;"></div>
+                    <div class="color-preview" style="background:#D81B60"></div>
                     <span class="theme-name">粉色</span>
-                    <span class="material-symbols-outlined check-mark">check_circle</span>
+                    <svg class="ico check-mark"><use href="#i-check-circle"></use></svg>
                 </div>
                 <div class="theme-option" data-theme="green">
-                    <div class="color-preview" style="background: #0F7B3A;"></div>
+                    <div class="color-preview" style="background:#0F7B3A"></div>
                     <span class="theme-name">绿色</span>
-                    <span class="material-symbols-outlined check-mark">check_circle</span>
+                    <svg class="ico check-mark"><use href="#i-check-circle"></use></svg>
                 </div>
                 <div class="theme-option" data-theme="orange">
-                    <div class="color-preview" style="background: #E65100;"></div>
+                    <div class="color-preview" style="background:#E65100"></div>
                     <span class="theme-name">橙色</span>
-                    <span class="material-symbols-outlined check-mark">check_circle</span>
+                    <svg class="ico check-mark"><use href="#i-check-circle"></use></svg>
                 </div>
             </div>
         </div>
 
-        <!-- ===== 外观模式 ===== -->
         <div class="settings-group">
             <div class="settings-group-title">
-                <span class="material-symbols-outlined">brightness_medium</span> 外观模式
+                <svg class="ico"><use href="#i-sun"></use></svg>
+                外观模式
             </div>
             <div class="mode-selector" id="modeSelector">
                 <div class="mode-option" data-mode="light">
-                    <span class="material-symbols-outlined">light_mode</span> 亮色
+                    <svg class="ico"><use href="#i-sun"></use></svg> 亮色
                 </div>
                 <div class="mode-option" data-mode="dark">
-                    <span class="material-symbols-outlined">dark_mode</span> 暗色
+                    <svg class="ico"><use href="#i-moon"></use></svg> 暗色
                 </div>
                 <div class="mode-option active" data-mode="auto">
-                    <span class="material-symbols-outlined">auto_awesome</span> 自动
+                    <svg class="ico"><use href="#i-monitor"></use></svg> 自动
                 </div>
             </div>
         </div>
 
-        <!-- 应用按钮 -->
+        <div class="settings-group">
+            <div class="settings-group-title">
+                <svg class="ico"><use href="#i-globe"></use></svg>
+                连接与 API
+            </div>
+            <div class="mode-selector" id="apiModeSelector">
+                <div class="mode-option active" data-mode="local">
+                    <svg class="ico"><use href="#i-home"></use></svg> 本地服务
+                </div>
+                <div class="mode-option" data-mode="remote">
+                    <svg class="ico"><use href="#i-globe"></use></svg> 远程 API
+                </div>
+            </div>
+
+            <div id="localPanel" style="margin-top:16px">
+                <div class="network-fields">
+                    <div class="network-field">
+                        <label for="serverHost">监听 IP</label>
+                        <input id="serverHost" type="text" placeholder="127.0.0.1" autocomplete="off" />
+                    </div>
+                    <div class="network-field">
+                        <label for="serverPort">端口</label>
+                        <input id="serverPort" type="number" min="1" max="65535" placeholder="随机" autocomplete="off" />
+                    </div>
+                </div>
+                <p class="network-note">留空表示使用 127.0.0.1 与随机端口。保存时会先校验「地址属于本机 + 端口未被占用」，通过后才重启服务并写入配置，失败则原样回滚。填 0.0.0.0 可让本机全部地址都可访问。</p>
+                <p class="network-note" id="localAddresses"></p>
+            </div>
+
+            <div id="remotePanel" style="display:none;margin-top:16px">
+                <div class="network-field" style="margin-bottom:12px">
+                    <label for="remoteUrl">远程 API 地址</label>
+                    <input id="remoteUrl" type="text" placeholder="http://192.168.1.9:8765" autocomplete="off" />
+                </div>
+                <div class="network-field">
+                    <label for="remoteToken">访问令牌（accessToken）</label>
+                    <input id="remoteToken" type="password" placeholder="服务端 serve 模式生成的令牌" autocomplete="off" />
+                </div>
+                <div class="action-row" style="margin-top:14px">
+                    <button class="btn-secondary" id="testRemoteBtn">
+                        <svg class="ico"><use href="#i-check-circle"></use></svg> 测试连接
+                    </button>
+                    <button class="btn-secondary" id="docsBtn">
+                        <svg class="ico"><use href="#i-file-text"></use></svg> 接口文档
+                    </button>
+                </div>
+                <p class="network-note">远程地址形如 <code>http://主机:端口</code>（无需带 /api）。令牌来自服务端：<code>python main.py serve --host 0.0.0.0 --port 8765</code>。建议仅在可信网络或 HTTPS 反代后使用。</p>
+            </div>
+            <p class="network-status" id="apiStatus"></p>
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-group-title">
+                <svg class="ico"><use href="#i-users"></use></svg>
+                账户
+            </div>
+            <p class="danger-note" id="accountNote">
+                当前登录用户：<strong id="currentUser">—</strong><br />
+                切换用户会锁闭当前保险库并返回登录界面，各用户的数据彼此独立。
+            </p>
+            <button class="btn-primary" id="switchUserBtn">
+                <svg class="ico"><use href="#i-users"></use></svg> 切换用户
+            </button>
+        </div>
+
+        <div class="settings-group">
+            <div class="settings-group-title" style="color:#D32F2F">
+                <svg class="ico" style="color:#D32F2F"><use href="#i-alert-triangle"></use></svg>
+                重置程序
+            </div>
+            <p class="danger-note">
+                将删除本地保存的<strong>全部用户</strong>及其账户数据、界面偏好，并立即关闭程序，回到首次使用状态。<strong>此操作不可撤销。</strong>
+            </p>
+            <button class="btn-danger" id="resetBtn">
+                <svg class="ico"><use href="#i-alert-triangle"></use></svg> 重置并退出
+            </button>
+        </div>
+
         <div class="action-row">
             <button class="btn-primary" id="applyBtn">
-                <span class="material-symbols-outlined">check</span> 应用并返回
+                <svg class="ico"><use href="#i-check"></use></svg> 应用并返回
             </button>
         </div>
     </div>
 
     <script>
-        (function() {
+        (function () {
             'use strict';
 
-            // ===== 颜色主题定义 =====
+            const els = {
+                host: document.getElementById('serverHost'),
+                port: document.getElementById('serverPort'),
+                remoteUrl: document.getElementById('remoteUrl'),
+                remoteToken: document.getElementById('remoteToken'),
+                localPanel: document.getElementById('localPanel'),
+                remotePanel: document.getElementById('remotePanel'),
+                modeSelector: document.getElementById('apiModeSelector'),
+                addresses: document.getElementById('localAddresses'),
+                status: document.getElementById('apiStatus'),
+                testBtn: document.getElementById('testRemoteBtn'),
+                docsBtn: document.getElementById('docsBtn'),
+                applyBtn: document.getElementById('applyBtn'),
+                currentUser: document.getElementById('currentUser')
+            };
+
+            let currentMode = ApiClient.LOCAL;
+
+            function desktopApi() {
+                return window.pywebview && window.pywebview.api ? window.pywebview.api : null;
+            }
+
+            function setStatus(text, isError) {
+                els.status.textContent = text || '';
+                els.status.className = 'network-status' + (isError ? ' error' : '');
+            }
+
+            function showMode(mode) {
+                currentMode = mode === ApiClient.REMOTE ? ApiClient.REMOTE : ApiClient.LOCAL;
+                const remote = currentMode === ApiClient.REMOTE;
+                els.remotePanel.style.display = remote ? 'block' : 'none';
+                els.localPanel.style.display = remote ? 'none' : 'block';
+                els.modeSelector.querySelectorAll('.mode-option').forEach(function (item) {
+                    item.classList.toggle('active', item.dataset.mode === currentMode);
+                });
+            }
+
+            // 页面加载时保活一次，避免从主页导航过来时触发服务退出；同时展示当前连接状态
+            ApiClient.info().then(function (res) {
+                if (res && res.username) els.currentUser.textContent = res.username;
+                if (res && res.urls && res.urls.length) {
+                    const list = res.urls.slice(0, 4).join('、');
+                    els.addresses.textContent = '本机可访问地址：' + list
+                        + (res.urls.length > 4 ? ' 等 ' + res.urls.length + ' 个' : '');
+                }
+            }).catch(function () {});
+
+            els.modeSelector.addEventListener('click', function (e) {
+                const option = e.target.closest('.mode-option');
+                if (option) showMode(option.dataset.mode);
+            });
+
             const colorThemes = {
                 blue: { primary: '#1A73E8', onPrimary: '#FFFFFF', primaryContainer: '#D2E3FC', onPrimaryContainer: '#041E49' },
                 purple: { primary: '#7C3AED', onPrimary: '#FFFFFF', primaryContainer: '#E4D7F5', onPrimaryContainer: '#2D1B4E' },
@@ -395,22 +535,19 @@
                 orange: { primary: '#E65100', onPrimary: '#FFFFFF', primaryContainer: '#FDE0C8', onPrimaryContainer: '#4A1A00' }
             };
 
-            // ===== 应用颜色主题 =====
             function applyColorTheme(themeName) {
-                const root = document.documentElement;
+                const root = document.documentElement.style;
                 const theme = colorThemes[themeName] || colorThemes.blue;
-                root.style.setProperty('--md-primary', theme.primary);
-                root.style.setProperty('--md-on-primary', theme.onPrimary);
-                root.style.setProperty('--md-primary-container', theme.primaryContainer);
-                root.style.setProperty('--md-on-primary-container', theme.onPrimaryContainer);
-                // 更新高亮状态
-                document.querySelectorAll('.theme-option').forEach(el => {
+                root.setProperty('--md-primary', theme.primary);
+                root.setProperty('--md-on-primary', theme.onPrimary);
+                root.setProperty('--md-primary-container', theme.primaryContainer);
+                root.setProperty('--md-on-primary-container', theme.onPrimaryContainer);
+                document.querySelectorAll('.theme-option').forEach(function (el) {
                     el.classList.toggle('active', el.dataset.theme === themeName);
                 });
                 localStorage.setItem('md3_color_theme', themeName);
             }
 
-            // ===== 应用外观模式 =====
             function applyAppearanceMode(mode) {
                 const body = document.body;
                 body.classList.remove('light-mode', 'dark-mode');
@@ -420,59 +557,215 @@
                 } else {
                     body.classList.add(mode === 'dark' ? 'dark-mode' : 'light-mode');
                 }
-                // 更新高亮
-                document.querySelectorAll('.mode-option').forEach(el => {
+                document.querySelectorAll('.mode-option').forEach(function (el) {
                     el.classList.toggle('active', el.dataset.mode === mode);
                 });
                 localStorage.setItem('md3_appearance_mode', mode);
             }
 
-            // ===== 加载保存的设置 =====
             function loadSettings() {
-                const colorTheme = localStorage.getItem('md3_color_theme') || 'blue';
-                const appearanceMode = localStorage.getItem('md3_appearance_mode') || 'auto';
-                applyColorTheme(colorTheme);
-                applyAppearanceMode(appearanceMode);
+                applyColorTheme(localStorage.getItem('md3_color_theme') || 'blue');
+                applyAppearanceMode(localStorage.getItem('md3_appearance_mode') || 'auto');
+
+                const api = desktopApi();
+                if (api && api.get_connection_config) {
+                    api.get_connection_config().then(function (res) {
+                        const config = (res && res.config) || {};
+                        els.host.value = config.host && config.host !== '127.0.0.1' ? config.host : '';
+                        els.port.value = config.port || '';
+                        els.remoteUrl.value = config.remoteUrl || '';
+                        els.remoteToken.value = config.remoteToken || '';
+                        showMode(config.mode || ApiClient.LOCAL);
+                        if (config.docsUrl) setStatus('接口文档：' + config.docsUrl);
+                    }).catch(function () {
+                        showMode(ApiClient.LOCAL);
+                    });
+                    return;
+                }
+                // 浏览器兜底：本地缓存的连接配置
+                ApiClient.loadConfig().then(function (config) {
+                    els.remoteUrl.value = config.remoteUrl || '';
+                    els.remoteToken.value = config.remoteToken || '';
+                    showMode(config.mode);
+                });
+                els.host.value = localStorage.getItem('2fa_server_host') || '';
+                els.port.value = localStorage.getItem('2fa_server_port') || '';
             }
 
-            // ===== 监听系统变化（自动模式） =====
             function startSystemListener() {
-                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                const handleChange = (e) => {
-                    const currentMode = localStorage.getItem('md3_appearance_mode') || 'auto';
-                    if (currentMode === 'auto') {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+                    if ((localStorage.getItem('md3_appearance_mode') || 'auto') === 'auto') {
                         document.body.classList.remove('light-mode', 'dark-mode');
                         document.body.classList.add(e.matches ? 'dark-mode' : 'light-mode');
                     }
-                };
-                mediaQuery.addEventListener('change', handleChange);
+                });
             }
 
-            // 加载并监听
             loadSettings();
             startSystemListener();
 
-            // ===== 主题点击 =====
-            document.querySelectorAll('.theme-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    const theme = this.dataset.theme;
-                    applyColorTheme(theme);
+            document.querySelectorAll('.theme-option').forEach(function (option) {
+                option.addEventListener('click', function () {
+                    applyColorTheme(this.dataset.theme);
                 });
             });
 
-            // ===== 模式点击 =====
-            document.querySelectorAll('.mode-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    const mode = this.dataset.mode;
-                    applyAppearanceMode(mode);
+            document.querySelectorAll('.mode-option').forEach(function (option) {
+                option.addEventListener('click', function () {
+                    applyAppearanceMode(this.dataset.mode);
                 });
             });
 
-            // ===== 应用并返回 =====
-            document.getElementById('applyBtn').addEventListener('click', function() {
-                window.location.href = 'index.html';
+            // ===== 测试远程连接 =====
+            els.testBtn.addEventListener('click', function () {
+                const url = els.remoteUrl.value.trim();
+                const token = els.remoteToken.value.trim();
+                if (!url) { Toast.warn('请先填写远程 API 地址'); return; }
+                els.testBtn.disabled = true;
+                setStatus('正在连接…');
+                ApiClient.probe({ remoteUrl: url, remoteToken: token }).then(function (result) {
+                    const info = result.info || {};
+                    const detail = result.detail || {};
+                    setStatus('连接成功：用户 ' + (detail.username || info.username || '—')
+                        + '，耗时 ' + result.latencyMs + ' ms');
+                    Toast.success('远程 API 可用，耗时 ' + result.latencyMs + ' ms');
+                }).catch(function (err) {
+                    setStatus('连接失败：' + err.message, true);
+                    Toast.error('连接失败：' + err.message);
+                }).then(function () {
+                    els.testBtn.disabled = false;
+                });
             });
 
+            // ===== 打开接口文档 =====
+            els.docsBtn.addEventListener('click', function () {
+                ApiClient.openApiDocs().catch(function (err) {
+                    Toast.error('无法打开接口文档：' + err.message);
+                });
+            });
+
+            // ===== 应用连接设置 =====
+            els.applyBtn.addEventListener('click', function () {
+                const applyBtn = els.applyBtn;
+                const api = desktopApi();
+                applyBtn.disabled = true;
+
+                if (currentMode === ApiClient.REMOTE) {
+                    // 远程模式：保存地址与令牌，本地服务不做变更
+                    const tasks = [
+                        ApiClient.setConfig({
+                            mode: ApiClient.REMOTE,
+                            remoteUrl: els.remoteUrl.value.trim(),
+                            remoteToken: els.remoteToken.value.trim()
+                        })
+                    ];
+                    if (api && api.set_api_mode) tasks.push(api.set_api_mode(ApiClient.REMOTE));
+                    Promise.all(tasks).then(function () {
+                        Toast.success('已切换到远程 API');
+                        ApiClient.loadConfig().then(function () {
+                            window.location.href = 'index.html';
+                        });
+                    }).catch(function (err) {
+                        applyBtn.disabled = false;
+                        Toast.error('保存远程配置失败：' + ((err && err.message) || '未知错误'));
+                    });
+                    return;
+                }
+
+                // 本地模式：先把模式写回配置，再按新地址重建本地服务
+                const prepare = (api && api.set_api_mode)
+                    ? api.set_api_mode(ApiClient.LOCAL) : Promise.resolve(null);
+                prepare.then(function () {
+                    return ApiClient.setConfig({ mode: ApiClient.LOCAL });
+                }).then(function () {
+                    if (!api || !api.save_network_config) {
+                        // 浏览器兜底：仅记录偏好，等下次启动生效
+                        localStorage.setItem('2fa_server_host', els.host.value.trim());
+                        localStorage.setItem('2fa_server_port', els.port.value.trim());
+                        Toast.success('已保存，重启程序后生效');
+                        window.location.href = 'index.html';
+                        return null;
+                    }
+                    return api.save_network_config(els.host.value.trim(), els.port.value.trim())
+                        .then(function (res) {
+                            if (!res || !res.ok) {
+                                setStatus((res && res.error) || '保存失败', true);
+                                Toast.error((res && res.error) || '保存网络设置失败');
+                                applyBtn.disabled = false;
+                                return;
+                            }
+                            // 服务已重建时令牌会变化，页面交给桌面端重新加载，
+                            // 不再自行跳转，避免与 load_url 竞争出现 403
+                            if (res.restarted === false) {
+                                window.location.href = 'index.html';
+                            }
+                        });
+                }).catch(function (err) {
+                    applyBtn.disabled = false;
+                    Toast.error('保存失败：' + ((err && err.message) || '未知错误'));
+                });
+            });
+
+            // ===== 切换用户 =====
+            const switchUserBtn = document.getElementById('switchUserBtn');
+
+            function doSwitchUser() {
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.logout) {
+                    switchUserBtn.disabled = true;
+                    window.pywebview.api.logout().catch(function () {
+                        switchUserBtn.disabled = false;
+                    });
+                    return;
+                }
+                // 浏览器兜底模式：无法在进程内重开登录窗口，提示重启程序
+                Toast.warn('请在浏览器中关闭本页，然后重新启动程序以切换用户。', { duration: 0 });
+            }
+
+            switchUserBtn.addEventListener('click', function () {
+                Toast.warn('确定要切换用户吗？当前保险库将被锁闭。', {
+                    duration: 0,
+                    closable: true,
+                    action: { label: '切换', onClick: doSwitchUser }
+                });
+            });
+
+            // ===== 重置程序（二次确认） =====
+            const resetBtn = document.getElementById('resetBtn');
+
+            function doReset() {
+                resetBtn.disabled = true;
+
+                function done() {
+                    Toast.success('已重置，程序正在退出…', { duration: 0 });
+                }
+
+                ApiClient.resetAll().then(done).catch(function (err) {
+                    const message = String((err && err.message) || '');
+                    // 程序可能已开始退出导致连接中断，视为重置成功
+                    if (message.indexOf('Failed to fetch') >= 0 || message.indexOf('NetworkError') >= 0) {
+                        done();
+                        return;
+                    }
+                    resetBtn.disabled = false;
+                    Toast.error(message || '重置失败，请重试');
+                });
+            }
+
+            function confirmResetSecond() {
+                Toast.error('最后确认：将删除全部账户数据并退出程序，且无法恢复。', {
+                    duration: 0,
+                    closable: true,
+                    action: { label: '确认重置', onClick: doReset }
+                });
+            }
+
+            resetBtn.addEventListener('click', function () {
+                Toast.warn('确定要重置程序吗？', {
+                    duration: 0,
+                    closable: true,
+                    action: { label: '继续', onClick: confirmResetSecond }
+                });
+            });
         })();
     </script>
 </body>

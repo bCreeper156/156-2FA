@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>用户登录 · 2FA 工具</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal;
+            font-size: inherit; line-height: 1; letter-spacing: normal; text-transform: none;
+            display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
+            -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+        }
+        :root {
+            --primary: #1A73E8;
+            --surface: #FFFFFF;
+            --surface-variant: #F1F4F9;
+            --outline: #D3D9E3;
+            --on-surface: #1E293B;
+            --on-surface-variant: #475569;
+            --background: #F6F9FC;
+            --error: #D32F2F;
+            --success: #2E7D32;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface: #2C2C2C;
+                --surface-variant: #3A3A3A;
+                --outline: #5A5A5A;
+                --on-surface: #E8E8E8;
+                --on-surface-variant: #B0B0B0;
+                --background: #1A1A1A;
+                --error: #EF5350;
+                --success: #66BB6A;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--background);
+            color: var(--on-surface);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+        }
+        .card {
+            width: 100%; max-width: 380px;
+            background: var(--surface);
+            border: 1px solid var(--outline);
+            border-radius: 24px;
+            padding: 32px 28px 28px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .lock {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: var(--primary); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; margin: 0 auto 18px;
+        }
+        h1 { font-size: 21px; font-weight: 700; margin-bottom: 6px; }
+        .sub { font-size: 13.5px; color: var(--on-surface-variant); margin-bottom: 24px; line-height: 1.55; }
+        .label {
+            display: block; text-align: left;
+            font-size: 12.5px; font-weight: 600;
+            color: var(--on-surface-variant);
+            margin: 0 0 6px 4px;
+        }
+        .field { position: relative; margin-bottom: 14px; }
+        input[type="password"], input[type="text"] {
+            width: 100%; padding: 13px 16px;
+            font-size: 15px; font-family: inherit;
+            background: var(--surface-variant);
+            color: var(--on-surface);
+            border: 1.5px solid var(--outline);
+            border-radius: 14px; outline: none;
+            transition: border-color .18s;
+        }
+        input[type="password"] { padding-right: 46px; }
+        input:focus { border-color: var(--primary); }
+        .toggle {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            font-size: 17px; padding: 6px 8px; color: var(--on-surface-variant);
+        }
+        button.submit {
+            width: 100%; padding: 14px;
+            background: var(--primary); color: #fff;
+            border: none; border-radius: 40px;
+            font-size: 15px; font-weight: 600; font-family: inherit;
+            cursor: pointer; margin-top: 6px;
+            transition: filter .15s, transform .1s;
+        }
+        button.submit:hover { filter: brightness(1.08); }
+        button.submit:active { transform: scale(0.98); }
+        button.submit:disabled { opacity: .6; cursor: default; }
+        .hint {
+            font-size: 12px; color: var(--on-surface-variant);
+            margin-top: 18px; line-height: 1.6;
+            border-top: 1px solid var(--outline); padding-top: 14px;
+        }
+        .switch {
+            background: none; border: none; cursor: pointer;
+            color: var(--primary); font-size: 13px;
+            font-family: inherit; margin-top: 14px;
+        }
+        .switch:hover { text-decoration: underline; }
+        .cancel {
+            background: none; border: none; cursor: pointer;
+            color: var(--on-surface-variant); font-size: 13px;
+            margin-top: 8px; font-family: inherit;
+        }
+        .cancel:hover { color: var(--error); }
+        .hidden { display: none !important; }
+        .users-hint {
+            font-size: 12px; color: var(--on-surface-variant);
+            text-align: left; margin: 6px 0 0 4px; line-height: 1.5;
+        }
+    </style>
+    <script src="toast.js"></script>
+</head>
+<body>
+    <div class="card">
+        <div class="lock" aria-hidden="true"><span class="material-symbols-outlined">lock</span></div>
+        <h1 id="title">用户登录</h1>
+        <div class="sub" id="subtitle">使用你的账户解锁本地验证码</div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm">
+            <label class="label" for="loginUser">用户名</label>
+            <div class="field">
+                <input type="text" id="loginUser" autocomplete="username" placeholder="请输入用户名" list="userList" />
+                <datalist id="userList"></datalist>
+            </div>
+            <div class="users-hint hidden" id="usersHint"></div>
+
+            <label class="label" for="loginPass">口令</label>
+            <div class="field">
+                <input type="password" id="loginPass" autocomplete="current-password" placeholder="请输入口令" />
+                <button class="toggle" id="toggleLogin" type="button" title="显示/隐藏"><span class="material-symbols-outlined" aria-hidden="true">visibility</span></button>
+            </div>
+
+            <button class="submit" type="submit" id="loginBtn">登录并解锁</button>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="registerForm" class="hidden">
+            <label class="label" for="regUser">用户名</label>
+            <div class="field">
+                <input type="text" id="regUser" autocomplete="off" placeholder="中英文、数字、_ . -" />
+            </div>
+
+            <label class="label" for="regPass">设置口令</label>
+            <div class="field">
+                <input type="password" id="regPass" autocomplete="new-password" placeholder="至少 8 位" />
+                <button class="toggle" id="toggleReg" type="button" title="显示/隐藏"><span class="material-symbols-outlined" aria-hidden="true">visibility</span></button>
+            </div>
+
+            <label class="label" for="regConfirm">确认口令</label>
+            <div class="field">
+                <input type="password" id="regConfirm" autocomplete="new-password" placeholder="再次输入口令" />
+            </div>
+
+            <button class="submit" type="submit" id="registerBtn">创建账户并进入</button>
+        </form>
+
+        <button class="switch" id="switchBtn" type="button">创建新的账户</button>
+        <br />
+        <button class="cancel" id="cancelBtn" type="button">取消并退出</button>
+
+        <div class="hint">
+            口令仅在本机用于校验（Argon2id）与解密，不会上传网络。<br />
+            每个用户拥有各自独立的加密保险库。
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginUser = document.getElementById('loginUser');
+        const loginPass = document.getElementById('loginPass');
+        const regUser = document.getElementById('regUser');
+        const regPass = document.getElementById('regPass');
+        const regConfirm = document.getElementById('regConfirm');
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const switchBtn = document.getElementById('switchBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const title = document.getElementById('title');
+        const subtitle = document.getElementById('subtitle');
+        const userList = document.getElementById('userList');
+        const usersHint = document.getElementById('usersHint');
+
+        let bridgeReady = false;
+        let busy = false;
+        let hasUsers = false;
+
+        function ready(fn) {
+            if (window.pywebview) { fn(); return; }
+            window.addEventListener('pywebviewready', fn);
+        }
+
+        function showLogin() {
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+            switchBtn.textContent = hasUsers ? '创建新的账户' : '创建账户';
+            switchBtn.classList.remove('hidden');
+            title.textContent = '用户登录';
+            subtitle.textContent = '使用你的账户解锁本地验证码';
+            loginUser.focus();
+        }
+
+        function showRegister() {
+            registerForm.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+            switchBtn.textContent = hasUsers ? '返回登录' : '';
+            title.textContent = hasUsers ? '创建新账户' : '创建首个账户';
+            subtitle.textContent = hasUsers
+                ? '为另一位使用者创建独立账户'
+                : '还没有任何账户，先创建一个吧';
+            if (!hasUsers) switchBtn.classList.add('hidden');
+            regUser.focus();
+        }
+
+        function setBusy(button, text) {
+            busy = true;
+            loginBtn.disabled = true;
+            registerBtn.disabled = true;
+            button.textContent = text;
+        }
+
+        function resetBusy() {
+            busy = false;
+            loginBtn.disabled = false;
+            registerBtn.disabled = false;
+            loginBtn.textContent = '登录并解锁';
+            registerBtn.textContent = '创建账户并进入';
+        }
+
+        ready(function () {
+            bridgeReady = true;
+            window.pywebview.api.list_users().then(function (res) {
+                const users = (res && res.users) || [];
+                hasUsers = !!(res && res.hasUsers);
+                userList.innerHTML = '';
+                users.forEach(function (name) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    userList.appendChild(option);
+                });
+
+                if (hasUsers) {
+                    usersHint.textContent = '已有账户：' + users.join('、');
+                    usersHint.classList.remove('hidden');
+                    showLogin();
+                    if (users.length === 1) loginUser.value = users[0];
+                    loginPass.focus();
+                } else {
+                    usersHint.classList.add('hidden');
+                    showRegister();
+                }
+            }).catch(function () {
+                usersHint.classList.add('hidden');
+                showLogin();
+            });
+        });
+
+        function bindToggle(button, input) {
+            button.addEventListener('click', function () {
+                const isPwd = input.type === 'password';
+                input.type = isPwd ? 'text' : 'password';
+                button.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">' + (isPwd ? 'visibility_off' : 'visibility') + '</span>';
+                input.focus();
+            });
+        }
+        bindToggle(document.getElementById('toggleLogin'), loginPass);
+        bindToggle(document.getElementById('toggleReg'), regPass);
+
+        function doLogin() {
+            if (busy) return;
+            if (!bridgeReady) { Toast.warn('登录接口尚未就绪，请稍候…'); return; }
+            const username = loginUser.value.trim();
+            const password = loginPass.value;
+            if (!username) { Toast.warn('请输入用户名'); loginUser.focus(); return; }
+            if (!password) { Toast.warn('请输入口令'); loginPass.focus(); return; }
+
+            setBusy(loginBtn, '验证中…');
+            window.pywebview.api.login(username, password).then(function (res) {
+                if (res && res.ok) {
+                    Toast.success('登录成功，正在打开主界面…', { duration: 0 });
+                    loginBtn.textContent = '已通过';
+                    cancelBtn.disabled = true;
+                    switchBtn.disabled = true;
+                } else {
+                    resetBusy();
+                    loginPass.value = '';
+                    loginPass.focus();
+                    Toast.error((res && res.message) || '用户名或口令错误，请重试');
+                }
+            }).catch(function () {
+                resetBusy();
+                Toast.error('登录过程出错，请重试');
+            });
+        }
+
+        function doRegister() {
+            if (busy) return;
+            if (!bridgeReady) { Toast.warn('登录接口尚未就绪，请稍候…'); return; }
+            const username = regUser.value.trim();
+            const password = regPass.value;
+            const confirm = regConfirm.value;
+            if (!username) { Toast.warn('请输入用户名'); regUser.focus(); return; }
+            if (password.length < 8) { Toast.warn('口令至少需要 8 位'); regPass.focus(); return; }
+            if (password !== confirm) { Toast.warn('两次输入的口令不一致'); regConfirm.focus(); return; }
+
+            setBusy(registerBtn, '创建中…');
+            window.pywebview.api.register(username, password).then(function (res) {
+                if (res && res.ok) {
+                    Toast.success('账户已创建，正在打开主界面…', { duration: 0 });
+                    registerBtn.textContent = '已创建';
+                    cancelBtn.disabled = true;
+                    switchBtn.disabled = true;
+                } else {
+                    resetBusy();
+                    Toast.error((res && res.message) || '创建账户失败，请重试');
+                }
+            }).catch(function () {
+                resetBusy();
+                Toast.error('创建账户过程出错，请重试');
+            });
+        }
+
+        loginForm.addEventListener('submit', function (e) { e.preventDefault(); doLogin(); });
+        registerForm.addEventListener('submit', function (e) { e.preventDefault(); doRegister(); });
+
+        switchBtn.addEventListener('click', function () {
+            if (loginForm.classList.contains('hidden')) showLogin();
+            else showRegister();
+        });
+
+        loginUser.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); loginPass.focus(); }
+        });
+        regUser.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); regPass.focus(); }
+        });
+        regPass.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); regConfirm.focus(); }
+        });
+
+        cancelBtn.addEventListener('click', function () {
+            if (!bridgeReady) { window.close(); return; }
+            window.pywebview.api.cancel();
+        });
+    </script>
+</body>
+</html>

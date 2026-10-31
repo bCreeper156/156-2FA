@@ -15,8 +15,9 @@ A local-first 2FA tool featuring multi-user support, an Argon2id-based password 
 - Account data is stored locally as **AES-GCM encrypted JSON**; the `secret` field is never written to disk in plaintext.
 - The frontend **does not handle passwords** or access **plaintext secrets**; it only receives the calculated verification codes.
 - The main interface runs in a **pywebview desktop window** and does not invoke the system browser.
-- The local service listens only on `127.0.0.1` using a **random port** (30000–60000) and is not exposed to the public internet.
-- The current `IP:Port` and logged-in user are displayed in the top-left corner to facilitate troubleshooting or manual access.
+- By default the local service listens only on `127.0.0.1` using a **random port** (30000–60000); the listen IP and port can be customized in "Settings → Connection & API" (validated before applying).
+- Frontend and backend are separated: the backend only exposes REST endpoints under `/api/*`, while the frontend is static and can connect to the local service or a remote API.
+- The current data source (local `IP:Port` or remote address) and logged-in user are displayed in the top-left corner.
 - Password hash verification is performed even if the username does not exist, preventing username enumeration via response timing analysis. ---
 
 ## Installation and Execution
@@ -36,7 +37,9 @@ Dependencies:
 ### 2. Launch
 
 ```bash
-python main.py
+python main.py              # desktop mode (same as: python main.py gui)
+python main.py serve        # server mode: headless, serves the REST API
+python main.py --help       # full argument list
 ```
 
 First run: The login window automatically switches to "Create First Account"; enter a username and password (at least 8 characters) to proceed.
@@ -148,6 +151,65 @@ Users can "switch accounts" on the settings page; accounts are unlocked individu
 - Data Export/Import: Export encrypted backups (`.json`) or plaintext otpauth data (`.txt`), and perform batch restoration from these files; supports both **merge/append** (deduplicating by key) and **overwrite all** modes.
 - UI notifications consistently use the built-in Toast component (`web/toast.js`) instead of native `alert` or `confirm` dialogs. ---
 
+## Frontend / Backend Separation
+
+The backend (`server.py`) only serves REST endpoints under `/api/*`; the frontend (`web/`) is static
+and communicates with it over HTTP:
+
+```
+┌────────────────┐   HTTP /api/*   ┌──────────────────┐
+│  web/index.html│ ───────────────▶│  Python backend   │
+│  web/api.js    │◀─────────────── │  server.py        │
+└────────────────┘   JSON responses└──────────────────┘
+  static assets,      REST API + vault data
+  hostable anywhere
+```
+
+- Every frontend request goes through `ApiClient` (`web/api.js`): local sessions use the relative
+  path `/api`, while remote mode targets `http(s)://host:port` with `Authorization: Bearer <token>`.
+- Connection settings live in `data/server.json` (see `apiconfig.py`) and are shared by the desktop
+  shell and the browser fallback.
+- The API is self-describing via `openapi.py`: `/api/openapi.json` (OpenAPI 3.1) and `/api/docs` (HTML).
+
+**API documentation (Chinese)**: [`docs/API.md`](docs/API.md)
+
+### Custom listen IP and port
+
+"Settings → Connection & API" changes the local listen address. Saving applies it safely instead of
+breaking the app:
+
+1. **Validate first** — the address must resolve and belong to this machine; the port must be in
+   1–65535 and free (Windows `SO_REUSEADDR` allows double binding, so a `connect` probe plus
+   `SO_EXCLUSIVEADDRUSE` double-check are used).
+2. **Then start** — the configuration is written only after the new address is really listening.
+3. **Roll back on failure** — the previous address is restored (including the reset callback) with a
+   message that can be shown directly to the user.
+4. Unchanged settings do not restart the service; when the address changes, the shell reloads the
+   page with the fresh session token.
+
+If a stored port is occupied during startup, the program falls back to a usable port and updates the
+configuration instead of failing to start.
+
+### Connecting to a remote API
+
+Run the server on the machine that holds the data:
+
+```bash
+python main.py serve --host 0.0.0.0 --port 8765 --token <token>
+```
+
+In the desktop client, open "Settings → Connection & API", choose **Remote API**, fill in the address
+and token, and use **Test Connection** first. A separately hosted frontend can also be pointed at the
+backend with a URL parameter:
+
+```
+http://frontend-host/index.html?api=http://192.168.1.9:8765&apiToken=<token>
+```
+
+> Use remote mode only on trusted networks or behind an HTTPS reverse proxy.
+
+---
+
 ## Security Design
 
 | Item | Implementation |
@@ -157,10 +219,12 @@ Users can "switch accounts" on the settings page; accounts are unlocked individu
 | Username Enumeration Protection | Performs a hash check even if the username does not exist to equalize response times |
 | Key Derivation | Argon2id with random salt; parameters saved with the file to allow for seamless upgrades |
 | Data Encryption | AES-256-GCM (authenticated encryption; tamper detection supported) |
-| Service Listening | Binds only to `127.0.0.1` on a random port |
+| Service Listening | Binds to `127.0.0.1` on a random port by default; custom IP/port is validated (ownership + availability) before it takes effect |
 | UI Host | pywebview desktop window; does not launch the system web browser |
 | Origin Verification | Validates `Host` and `Origin` headers to prevent calls from other web pages or DNS rebinding attacks |
 | Frontend Isolation | Frontend receives only the verification code and current username; does not receive secrets or passwords |
+| Remote Access | Remote calls are allowed only after an `accessToken` is configured explicitly (Bearer token + CORS); disabled by default |
+| Self-describing API | `/api/openapi.json` and `/api/docs` are read-only and expose no account data |
 | Export/Backup | Backup files are encrypted with the user's password for safe storage; exported `otpauth` text is plaintext and requires secure handling by the user |
 | Cleanup on Exit | Clears passwords and keys from memory upon closing the main window or receiving a Ctrl+C signal |
 
@@ -170,20 +234,26 @@ Users can "switch accounts" on the settings page; accounts are unlocked individu
 
 ```
 156--2FA/
-├── main.py              # Main program: data root, login window, orchestration & cleanup
-├── server.py            # Local HTTP service and API endpoints
+├── main.py              # Main program: data root, login window, desktop/server orchestration
+├── server.py            # HTTP service and REST endpoints (backend)
+├── apiconfig.py         # Connection config: listen address, port, remote API and tokens
+├── openapi.py           # OpenAPI 3.1 spec (single source of truth for the API docs)
 ├── users.py             # Local multi-user accounts (user table + Argon2id password verification)
 ├── storage.py           # Encrypted data repository (Vault)
 ├── crypto_utils.py      # Argon2id password hashing/key derivation & AES-GCM encryption/decryption
 ├── totp_utils.py        # TOTP / HOTP calculation
 ├── qr_utils.py          # QR code decoding and otpauth URI parsing
 ├── requirements.txt     # Python dependencies
-├── web/
+├── docs/
+│   └── API.md           # API documentation (Chinese)
+├── web/                 # Frontend (static, hostable standalone)
 │   ├── index.html       # Main page for displaying verification codes
 │   ├── login.html       # User login / registration window
-│   ├── settings.html    # Theme settings, user switching, program reset
+│   ├── settings.html    # Theme, connection & API, user switching, program reset
+│   ├── apidocs.html     # API documentation page (served at /api/docs)
+│   ├── api.js           # Unified API client (local / remote data source)
 │   └── toast.js         # Site-wide toast notification component
-└── data/                # User table and individual user vaults (generated at runtime)
+└── data/                # User table, per-user vaults and server.json (generated at runtime)
 ```
 
 ---
